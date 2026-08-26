@@ -175,6 +175,14 @@ export const api = {
       }),
   },
 
+  // ML Workout Recommendations
+  recommendations: {
+    getWorkout: () =>
+      request('/recommendations/workout', {
+        method: 'POST',
+      }),
+  },
+
   // Health
   health: () => request('/health'),
 };

@@ -14,6 +14,7 @@ const strategyRoutes = require('./routes/strategyRoutes');
 const decisionRoutes = require('./routes/decisionRoutes');
 const experimentRoutes = require('./routes/experimentRoutes');
 const coachRoutes = require('./routes/coachRoutes');
+const recommendationRoutes = require('./routes/recommendationRoutes');
 const healthRoutes = require('./routes/healthRoutes');
 
 const app = express();
@@ -40,6 +41,7 @@ app.use('/api/strategy', strategyRoutes);
 app.use('/api/decisions', decisionRoutes);
 app.use('/api/experiments', experimentRoutes);
 app.use('/api/coach', coachRoutes);
+app.use('/api/recommendations', recommendationRoutes);
 
 // Fallback 404 Handler
 app.use((req, res, next) => {

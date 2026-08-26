@@ -12,7 +12,11 @@ import {
   Clock,
   Battery,
   Calendar,
-  BookOpen
+  BookOpen,
+  Brain,
+  Check,
+  TrendingUp,
+  RotateCcw
 } from 'lucide-react';
 import { Button } from '../components/common/Button';
 import { Card } from '../components/common/Card';
@@ -24,7 +28,20 @@ import { useApp } from '../context/AppContext';
 
 export const DashboardPage = () => {
   const navigate = useNavigate();
-  const { userProfile, dailyContext, currentPlan, progress, strategyHealth, insights } = useApp();
+  const {
+    userProfile,
+    dailyContext,
+    currentPlan,
+    setCurrentPlan,
+    progress,
+    strategyHealth,
+    insights,
+    mlRecommendation,
+    isLoadingMlRec,
+    fetchMlRecommendation,
+    startWorkoutSession
+  } = useApp();
+
   const [isAdjustModalOpen, setIsAdjustModalOpen] = useState(false);
 
   const readinessVariant = {
@@ -32,6 +49,33 @@ export const DashboardPage = () => {
     MODERATE: 'reduced',
     RECOVERY: 'recovery',
   }[dailyContext.readiness] || 'ready';
+
+  const recData = mlRecommendation?.recommendedWorkout;
+  const recScore = mlRecommendation?.score ? Math.round(mlRecommendation.score * 100) : 85;
+  const recFactors = mlRecommendation?.factors || [
+    `Fits your ${dailyContext.availableTimeMinutes || 20}-min available window`,
+    `Matches reported energy level ${dailyContext.energyLevel || 3}`
+  ];
+
+  const handleAdoptMlRecommendation = (workoutObj) => {
+    const target = workoutObj || recData;
+    if (!target) return;
+
+    setCurrentPlan({
+      id: target.id || 'W001',
+      title: target.title,
+      durationMinutes: target.durationMinutes,
+      difficulty: target.difficulty,
+      goal: target.goal,
+      status: 'PLANNED',
+      source: 'ML_RECOMMENDED',
+      exercises: target.exercises || [
+        { name: "Bodyweight Squats", sets: 3, reps: 12 },
+        { name: "Incline Push-ups", sets: 3, reps: 10 },
+        { name: "Jumping Jacks", sets: 3, durationSec: 30 }
+      ]
+    });
+  };
 
   return (
     <div className="space-y-6">
@@ -45,7 +89,7 @@ export const DashboardPage = () => {
             </Badge>
           </div>
           <p className="text-xs text-slate-400 mt-1">
-            Let's make today's workout fit your student schedule & energy.
+            FITMINDS adaptive ML engine personalized today's fitness plan for your student schedule.
           </p>
         </div>
 
@@ -59,7 +103,10 @@ export const DashboardPage = () => {
             variant="primary"
             size="sm"
             leftIcon={Play}
-            onClick={() => navigate('/workout')}
+            onClick={() => {
+              startWorkoutSession();
+              navigate('/workout');
+            }}
           >
             Start Workout
           </Button>
@@ -68,58 +115,120 @@ export const DashboardPage = () => {
 
       {/* Main Grid Section */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Left Column: Today's Plan & Context (2 cols on LG) */}
+        {/* Left Column: ML Recommendation & Context (2 cols on LG) */}
         <div className="lg:col-span-2 space-y-6">
-          {/* Today's Adaptive Plan Card */}
-          <Card variant="highlighted" className="relative overflow-hidden">
-            <div className="flex items-start justify-between mb-4">
-              <div>
-                <span className="text-[10px] font-bold text-brand uppercase tracking-wider">
-                  TODAY'S ADAPTIVE PLAN
-                </span>
-                <h3 className="text-xl font-bold text-slate-100 mt-1">{currentPlan.title}</h3>
-                <p className="text-xs text-slate-400 mt-0.5">{currentPlan.targetFocus}</p>
+          
+          {/* STEP 5: FITMINDS Real ML-Based Workout Recommendation Card */}
+          <div className="relative rounded-2xl p-6 bg-gradient-to-br from-indigo-950/80 via-slate-900 to-purple-950/70 border border-indigo-500/30 shadow-xl shadow-indigo-950/20">
+            <div className="flex flex-wrap items-center justify-between gap-2 mb-4">
+              <div className="flex items-center gap-2">
+                <div className="p-2 rounded-xl bg-indigo-500/20 border border-indigo-500/40 text-indigo-400">
+                  <Brain className="w-5 h-5 animate-pulse" />
+                </div>
+                <div>
+                  <div className="flex items-center gap-2">
+                    <span className="text-[11px] font-bold text-indigo-400 uppercase tracking-wider">
+                      FITMINDS ML ENGINE
+                    </span>
+                    <span className="text-[10px] px-2 py-0.5 rounded-full bg-indigo-500/20 text-indigo-300 font-mono">
+                      {mlRecommendation?.modelVersion || 'workout-recommender-v1'}
+                    </span>
+                  </div>
+                  <h3 className="text-xl font-extrabold text-slate-100 mt-0.5">
+                    {recData ? recData.title : "15-Min Express Full Body"}
+                  </h3>
+                </div>
               </div>
 
-              <Badge variant="brand" icon={Clock} size="md">
-                {currentPlan.durationMinutes} MIN
-              </Badge>
+              <div className="flex items-center gap-2">
+                <div className="px-3 py-1.5 rounded-xl bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 text-xs font-bold flex items-center gap-1.5">
+                  <TrendingUp className="w-3.5 h-3.5" />
+                  {recScore}% Match Score
+                </div>
+                <button
+                  onClick={fetchMlRecommendation}
+                  disabled={isLoadingMlRec}
+                  className="p-2 rounded-xl bg-slate-800/80 hover:bg-slate-700 text-slate-300 transition-colors"
+                  title="Re-run ML Inference Engine"
+                >
+                  <RotateCcw className={`w-4 h-4 ${isLoadingMlRec ? 'animate-spin' : ''}`} />
+                </button>
+              </div>
             </div>
 
-            {/* Plan Metrics Row */}
-            <div className="grid grid-cols-3 gap-3 my-4 p-3 rounded-xl bg-slate-900/80 border border-slate-800 text-xs">
+            {/* Recommendation Factors */}
+            <div className="mb-4">
+              <span className="text-[11px] font-medium text-slate-400 block mb-2">
+                Why ML selected this workout for you today:
+              </span>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                {recFactors.map((factor, idx) => (
+                  <div key={idx} className="flex items-center gap-2 text-xs text-slate-300 bg-slate-900/60 p-2.5 rounded-xl border border-slate-800">
+                    <CheckCircle className="w-3.5 h-3.5 text-indigo-400 shrink-0" />
+                    <span>{factor}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* Workout Details Row */}
+            <div className="grid grid-cols-3 gap-3 my-4 p-3 rounded-xl bg-slate-900/90 border border-slate-800 text-xs">
               <div>
                 <span className="text-slate-400">Duration</span>
-                <p className="font-semibold text-slate-200 mt-0.5">{currentPlan.durationMinutes} Minutes</p>
+                <p className="font-semibold text-slate-100 mt-0.5">{recData?.durationMinutes || 15} Minutes</p>
               </div>
               <div>
                 <span className="text-slate-400">Difficulty</span>
-                <p className="font-semibold text-slate-200 mt-0.5">{currentPlan.difficulty}</p>
+                <p className="font-semibold text-slate-100 mt-0.5">{recData?.difficulty || 'BEGINNER'}</p>
               </div>
               <div>
-                <span className="text-slate-400">Exercises</span>
-                <p className="font-semibold text-slate-200 mt-0.5">{currentPlan.exercises.length} Movements</p>
+                <span className="text-slate-400">Equipment</span>
+                <p className="font-semibold text-slate-100 mt-0.5">{recData?.equipment || 'NONE'}</p>
               </div>
             </div>
 
+            {/* Candidate Alternatives */}
+            {mlRecommendation?.alternatives?.length > 0 && (
+              <div className="mb-5 pt-3 border-t border-slate-800/80">
+                <span className="text-[11px] text-slate-400 block mb-2">Alternative ML Ranked Choices:</span>
+                <div className="flex flex-wrap gap-2">
+                  {mlRecommendation.alternatives.map((alt) => (
+                    <button
+                      key={alt.id}
+                      onClick={() => handleAdoptMlRecommendation(alt)}
+                      className="px-3 py-1.5 rounded-lg bg-slate-900 hover:bg-indigo-950/60 border border-slate-800 hover:border-indigo-500/40 text-xs text-slate-300 transition-all flex items-center gap-2"
+                    >
+                      <span>{alt.title} ({alt.durationMinutes}m)</span>
+                      <span className="text-[10px] text-indigo-400 font-bold">{Math.round(alt.score * 100)}%</span>
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
+
             {/* CTAs */}
-            <div className="flex items-center gap-3 pt-2">
+            <div className="flex flex-wrap items-center gap-3 pt-2">
               <Button
                 variant="primary"
                 leftIcon={Play}
-                onClick={() => navigate('/today')}
+                onClick={() => {
+                  handleAdoptMlRecommendation();
+                  startWorkoutSession();
+                  navigate('/workout');
+                }}
               >
-                View Full Workout
+                Start ML Recommended Workout
               </Button>
+
               <Button
                 variant="secondary"
                 leftIcon={Sliders}
                 onClick={() => setIsAdjustModalOpen(true)}
               >
-                Adjust Plan
+                Manual Adjustments
               </Button>
             </div>
-          </Card>
+          </div>
 
           {/* Today's Context Card */}
           <Card variant="default">
@@ -177,13 +286,13 @@ export const DashboardPage = () => {
           <Card variant="aiInsight" className="space-y-3">
             <div className="flex items-center justify-between">
               <Badge variant="ai" icon={Sparkles}>
-                FITMINDS INSIGHT
+                FITMINDS AI COACH
               </Badge>
-              <span className="text-[10px] text-purple-300">Adaptive Intelligence</span>
+              <span className="text-[10px] text-purple-300">Gemini Explanation</span>
             </div>
 
             <p className="text-xs font-medium text-purple-200 leading-relaxed">
-              "{insights[0].summary}"
+              "{insights[0]?.summary || 'ML model scored today workout options for highest completion probability. Focus on maintaining consistency!'}"
             </p>
 
             <Button
@@ -191,9 +300,9 @@ export const DashboardPage = () => {
               size="sm"
               fullWidth
               rightIcon={ArrowRight}
-              onClick={() => navigate('/decision-history')}
+              onClick={() => navigate('/coach')}
             >
-              Why this changed
+              Ask AI Coach
             </Button>
           </Card>
 

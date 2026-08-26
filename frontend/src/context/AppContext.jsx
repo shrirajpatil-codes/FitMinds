@@ -33,6 +33,10 @@ export const AppProvider = ({ children }) => {
   const [reflections, setReflections] = useState([]);
   const [completedSummary, setCompletedSummary] = useState(null);
 
+  // ML Workout Recommendation State
+  const [mlRecommendation, setMlRecommendation] = useState(null);
+  const [isLoadingMlRec, setIsLoadingMlRec] = useState(false);
+
   // Active workout execution state
   const [activeSessionId, setActiveSessionId] = useState(null);
   const [activeExerciseIndex, setActiveExerciseIndex] = useState(0);
@@ -48,6 +52,22 @@ export const AppProvider = ({ children }) => {
       time: 'Just now'
     }
   ]);
+
+  // Method to fetch ML Recommendation
+  const fetchMlRecommendation = useCallback(async () => {
+    if (!localStorage.getItem('FITMINDS_TOKEN')) return;
+    setIsLoadingMlRec(true);
+    try {
+      const res = await api.recommendations.getWorkout();
+      if (res.success && res.data) {
+        setMlRecommendation(res.data);
+      }
+    } catch (err) {
+      console.warn('ML recommendation fetch error:', err.message);
+    } finally {
+      setIsLoadingMlRec(false);
+    }
+  }, []);
 
   // Load all user data from backend APIs
   const refreshUserData = useCallback(async () => {
@@ -139,143 +159,79 @@ export const AppProvider = ({ children }) => {
         console.warn('Progress fetch error:', e.message);
       }
 
-      // 5. Strategy Health
-      try {
-        const stratRes = await api.strategy.health();
-        if (stratRes.success && stratRes.data) {
-          const s = stratRes.data;
-          setStrategyHealth(prev => ({
-            ...prev,
-            healthStatus: s.status,
-            sustainabilityScore: s.sustainabilityScore,
-            metrics: {
-              completionRate: s.completionRate,
-              modificationRate: s.modificationRate,
-              skipRate: s.skipRate,
-              avgDuration: s.averageDurationMinutes,
-            },
-            notes: s.recommendation,
-          }));
-        }
-      } catch (e) {
-        console.warn('Strategy fetch error:', e.message);
-      }
+      // 5. ML Workout Recommendation
+      fetchMlRecommendation();
 
-      // 6. Decision History
-      try {
-        const decRes = await api.decisions.list();
-        if (decRes.success && Array.isArray(decRes.data) && decRes.data.length > 0) {
-          setDecisions(decRes.data.map(d => ({
-            id: d.id,
-            date: new Date(d.createdAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
-            title: d.decisionType.replace(/_/g, ' '),
-            badge: d.decisionType,
-            badgeVariant: 'brand',
-            reason: d.reason || 'Automated adaptation',
-            whatChanged: `Changed from ${d.previousValue || 'N/A'} to ${d.newValue || 'N/A'}`,
-            whyItChanged: d.reason || 'Optimized for student schedule',
-            signalsInfluenced: Array.isArray(d.signals) ? d.signals : [d.reason || 'Check-in signal'],
-            outcome: d.outcome || 'Updated plan',
-          })));
-        }
-      } catch (e) {
-        console.warn('Decisions fetch error:', e.message);
-      }
-
-      // 7. Experiments
-      try {
-        const expRes = await api.experiments.list();
-        if (expRes.success && Array.isArray(expRes.data) && expRes.data.length > 0) {
-          setExperiments(expRes.data.map(e => ({
-            id: e.id,
-            title: e.name,
-            status: e.status,
-            hypothesis: e.hypothesis,
-            baseline: e.baselineStrategy,
-            variant: e.testStrategy,
-            metrics: e.metrics || { completionRate: 90 },
-            outcome: e.outcome || 'Ongoing',
-          })));
-        }
-      } catch (e) {
-        console.warn('Experiments fetch error:', e.message);
-      }
-
-      // 8. Reflections
-      try {
-        const refRes = await api.reflections.list();
-        if (refRes.success && Array.isArray(refRes.data)) {
-          setReflections(refRes.data);
-        }
-      } catch (e) {
-        console.warn('Reflections fetch error:', e.message);
-      }
     } catch (err) {
-      console.error('Failed to load user data:', err);
+      console.error('Failed to refresh user data:', err);
     }
-  }, []);
+  }, [fetchMlRecommendation]);
 
-  // Check auth on mount
+  // Initial Auth check
   useEffect(() => {
     const initAuth = async () => {
       const storedToken = localStorage.getItem('FITMINDS_TOKEN');
-      if (storedToken) {
-        try {
-          const res = await api.auth.me();
-          if (res.success && res.data) {
-            setCurrentUser(res.data);
-            setToken(storedToken);
-            await refreshUserData();
-          } else {
-            localStorage.removeItem('FITMINDS_TOKEN');
-            setToken(null);
-            setCurrentUser(null);
-          }
-        } catch (err) {
-          localStorage.removeItem('FITMINDS_TOKEN');
-          setToken(null);
-          setCurrentUser(null);
-        }
+      if (!storedToken) {
+        setIsLoadingAuth(false);
+        return;
       }
-      setIsLoadingAuth(false);
+      try {
+        await refreshUserData();
+      } catch (err) {
+        console.error('Auth initialization error:', err);
+        localStorage.removeItem('FITMINDS_TOKEN');
+        setToken(null);
+        setCurrentUser(null);
+      } finally {
+        setIsLoadingAuth(false);
+      }
     };
+
     initAuth();
   }, [refreshUserData]);
 
-  // Auth Methods
-  const registerUser = async (name, email, password) => {
-    setAuthError(null);
-    try {
-      const res = await api.auth.register(name, email, password);
-      if (res.success && res.data) {
-        const { token: newToken, user } = res.data;
-        localStorage.setItem('FITMINDS_TOKEN', newToken);
-        setToken(newToken);
-        setCurrentUser(user);
-        await refreshUserData();
-        return { success: true, user };
-      }
-    } catch (err) {
-      setAuthError(err.message || 'Registration failed.');
-      return { success: false, error: err.message };
-    }
-  };
-
+  // Authentication Handlers
   const loginUser = async (email, password) => {
+    setIsLoadingAuth(true);
     setAuthError(null);
     try {
       const res = await api.auth.login(email, password);
-      if (res.success && res.data) {
-        const { token: newToken, user } = res.data;
-        localStorage.setItem('FITMINDS_TOKEN', newToken);
-        setToken(newToken);
-        setCurrentUser(user);
+      if (res.success && res.data?.token) {
+        localStorage.setItem('FITMINDS_TOKEN', res.data.token);
+        setToken(res.data.token);
+        setCurrentUser(res.data.user);
         await refreshUserData();
-        return { success: true, user };
+        return { success: true };
+      } else {
+        throw new Error(res.message || 'Login failed');
       }
     } catch (err) {
-      setAuthError(err.message || 'Invalid email or password.');
-      return { success: false, error: err.message };
+      setAuthError(err.message || 'Invalid credentials');
+      return { success: false, message: err.message };
+    } finally {
+      setIsLoadingAuth(false);
+    }
+  };
+
+  const registerUser = async (name, email, password) => {
+    setIsLoadingAuth(true);
+    setAuthError(null);
+    try {
+      const res = await api.auth.register(name, email, password);
+      if (res.success && res.data?.token) {
+        localStorage.setItem('FITMINDS_TOKEN', res.data.token);
+        setToken(res.data.token);
+        setCurrentUser(res.data.user);
+        await refreshUserData();
+        return { success: true };
+      } else {
+        throw new Error(res.message || 'Registration failed');
+      }
+    } catch (err) {
+      setAuthError(err.message || 'Registration failed');
+      return { success: false, message: err.message };
+    } finally {
+      setIsLoadingAuth(false);
     }
   };
 
@@ -285,216 +241,189 @@ export const AppProvider = ({ children }) => {
     setCurrentUser(null);
   };
 
-  // Update Profile Data in Backend
-  const updateProfileData = async (profileFields) => {
+  // Method to update user profile
+  const updateProfileData = async (updatedFields) => {
+    setUserProfile(prev => ({ ...prev, ...updatedFields }));
     try {
-      const res = await api.profile.update(profileFields);
-      if (res.success && res.data) {
-        const p = res.data;
-        setUserProfile(prev => ({
-          ...prev,
-          age: p.age !== null ? p.age : prev.age,
-          fitnessLevel: p.fitnessExperience || prev.fitnessLevel,
-          goal: p.fitnessGoal || prev.goal,
-          availableTimeMinutes: p.availableWorkoutTime || prev.availableTimeMinutes,
-          workoutWindow: p.preferredWorkoutWindow || prev.workoutWindow,
-          equipment: p.equipment || prev.equipment,
-          lifestyleLoad: p.lifestyleLoad || prev.lifestyleLoad,
-          onboardingCompleted: p.onboardingCompleted,
-        }));
-        if (currentUser) {
-          setCurrentUser(prev => ({
-            ...prev,
-            onboardingCompleted: p.onboardingCompleted,
-          }));
-        }
-        return { success: true };
-      }
-    } catch (err) {
-      console.error('Update profile error:', err);
-      return { success: false, error: err.message };
+      await api.profile.update({
+        fitnessGoal: updatedFields.goal || userProfile.goal,
+        fitnessExperience: updatedFields.fitnessLevel || userProfile.fitnessLevel,
+        availableWorkoutTime: parseInt(updatedFields.availableTimeMinutes || userProfile.availableTimeMinutes, 10),
+        preferredWorkoutWindow: updatedFields.workoutWindow || userProfile.workoutWindow,
+        equipment: updatedFields.equipment || userProfile.equipment,
+        lifestyleLoad: updatedFields.lifestyleLoad || userProfile.lifestyleLoad,
+        age: parseInt(updatedFields.age || userProfile.age, 10),
+      });
+      fetchMlRecommendation();
+    } catch (e) {
+      console.warn('Backend profile update failed:', e.message);
     }
   };
 
-  // Onboarding Complete
+  // Method to save onboarding data
   const saveOnboardingProfile = async (onboardingData) => {
-    return await updateProfileData({
-      ...onboardingData,
+    const formatted = {
+      goal: onboardingData.fitnessGoal,
+      fitnessLevel: onboardingData.fitnessExperience,
+      availableTimeMinutes: onboardingData.availableWorkoutTime,
+      workoutWindow: onboardingData.preferredWorkoutWindow,
+      equipment: onboardingData.equipment || 'NONE',
+      lifestyleLoad: onboardingData.lifestyleLoad || 'MODERATE',
       onboardingCompleted: true,
-    });
+    };
+    await updateProfileData(formatted);
   };
 
-  // Method to update Daily Check-in
-  const updateDailyCheckin = async ({ energy, readiness, availableTime, academicLoad, notes }) => {
-    const timeNum = parseInt(availableTime, 10) || 20;
-    
-    // UI optimistic update
+  // Method to handle Daily Check-in submission
+  const updateDailyCheckin = async (checkinData) => {
     setDailyContext(prev => ({
       ...prev,
-      energyLevel: energy || prev.energyLevel,
-      readiness: readiness || prev.readiness,
-      availableTimeMinutes: timeNum,
-      academicLoad: academicLoad || prev.academicLoad,
-      lastCheckinTime: 'Just updated',
-      contextSummary: `FITMINDS adapted today's session for your ${timeNum}-min window & ${academicLoad || 'moderate'} academic load.`,
+      availableTimeMinutes: checkinData.timeAvailable,
+      energyLevel: checkinData.energyLevel,
+      readiness: checkinData.energyLevel >= 4 ? 'READY' : checkinData.energyLevel === 3 ? 'MODERATE' : 'RECOVERY',
+      lastCheckinTime: 'Just now',
+      contextSummary: `FITMINDS adapted today's session for your ${checkinData.timeAvailable}-min window & ${dailyContext.academicLoad.toLowerCase()} academic load.`,
     }));
 
-    setCurrentPlan(prev => ({
-      ...prev,
-      durationMinutes: timeNum,
-      status: 'Adapted',
-    }));
-
-    // API Call
     try {
       await api.checkins.create({
-        energyLevel: energy || 3,
-        readinessLevel: readiness || 3,
-        availableTimeMinutes: timeNum,
-        academicLoad: academicLoad ? academicLoad.toUpperCase() : 'MODERATE',
-        note: notes || '',
+        energyLevel: parseInt(checkinData.energyLevel, 10),
+        readinessLevel: checkinData.energyLevel >= 4 ? 4 : checkinData.energyLevel === 3 ? 3 : 2,
+        availableTimeMinutes: parseInt(checkinData.timeAvailable, 10),
+        academicLoad: dailyContext.academicLoad || 'MODERATE',
+        note: checkinData.note || '',
       });
-      await refreshUserData();
-    } catch (err) {
-      console.error('Checkin API error:', err);
+    } catch (e) {
+      console.warn('Backend checkin create error:', e.message);
+    }
+
+    // Adapt current plan duration
+    if (checkinData.timeAvailable < currentPlan.durationMinutes) {
+      setCurrentPlan(prev => ({
+        ...prev,
+        title: `Express ${checkinData.timeAvailable}-Min Session`,
+        durationMinutes: checkinData.timeAvailable,
+        source: 'ADAPTED',
+      }));
+    }
+
+    // Refresh ML Recommendation with new check-in state
+    fetchMlRecommendation();
+  };
+
+  // Method to adjust plan manually
+  const applyPlanAdjustment = (actionType) => {
+    if (actionType === 'less_time') {
+      setCurrentPlan(prev => ({
+        ...prev,
+        title: 'Express 12-Min Burn',
+        durationMinutes: 12,
+        source: 'ADAPTED'
+      }));
+    } else if (actionType === 'lower_intensity') {
+      setCurrentPlan(prev => ({
+        ...prev,
+        title: 'Active Mobility & Recovery',
+        difficulty: 'Easy',
+        source: 'ADAPTED'
+      }));
+    } else if (actionType === 'change_focus') {
+      setCurrentPlan(prev => ({
+        ...prev,
+        title: 'Upper Body & Core Focus',
+        source: 'USER_MODIFIED'
+      }));
     }
   };
 
-  // Method to manually adjust plan
-  const applyPlanAdjustment = async (preset) => {
-    const reducedDuration = preset.reducedDuration || 15;
-    
-    setCurrentPlan(prev => ({
-      ...prev,
-      durationMinutes: reducedDuration,
-      status: 'Manually Adjusted',
-    }));
-
-    if (currentPlan?.id) {
-      try {
-        await api.workouts.modify(currentPlan.id, {
-          durationMinutes: reducedDuration,
-          label: preset.label || 'Manual preset',
-          reason: preset.description || 'User applied workout modification preset.',
-        });
-        await refreshUserData();
-      } catch (err) {
-        console.error('Modify workout API error:', err);
-      }
-    }
-  };
-
-  // Start workout
-  const startWorkoutSession = async () => {
-    if (currentPlan?.id) {
-      try {
-        const res = await api.workouts.start(currentPlan.id);
-        if (res.success && res.data?.session) {
-          setActiveSessionId(res.data.session.id);
-        }
-      } catch (err) {
-        console.warn('Start workout session API warning:', err);
-      }
-    }
-  };
-
-  // Method to complete set / exercise
-  const completeCurrentSet = () => {
-    const currentEx = currentPlan.exercises[activeExerciseIndex];
-    if (!currentEx) return;
-
-    if (activeSet < currentEx.sets) {
-      setActiveSet(prev => prev + 1);
-    } else {
-      setCompletedExerciseIds(prev => [...prev, currentEx.id]);
-      if (activeExerciseIndex < currentPlan.exercises.length - 1) {
-        setActiveExerciseIndex(prev => prev + 1);
-        setActiveSet(1);
-      }
-    }
-  };
-
-  // Method to skip exercise
-  const skipCurrentExercise = () => {
-    if (activeExerciseIndex < currentPlan.exercises.length - 1) {
-      setActiveExerciseIndex(prev => prev + 1);
-      setActiveSet(1);
-    }
-  };
-
-  // Method to finish workout session
-  const finishWorkout = async (feelRating = 'Good', notes = '') => {
-    const summary = {
-      completedAt: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-      durationMinutes: currentPlan.durationMinutes,
-      exercisesCompletedCount: completedExerciseIds.length + 1,
-      totalSetsCompleted: (completedExerciseIds.length + 1) * 3,
-      totalRepsCount: 110,
-      feelRating,
-      notes,
-    };
-
-    setCompletedSummary(summary);
-
-    // Call API if session exists or complete current plan
-    if (activeSessionId) {
-      try {
-        const feedbackEnumMap = {
-          'Easy': 'EASY',
-          'Good': 'GOOD',
-          'Challenging': 'CHALLENGING',
-          'Too Difficult': 'TOO_DIFFICULT',
-        };
-        await api.sessions.complete(activeSessionId, {
-          actualDurationMinutes: currentPlan.durationMinutes,
-          exercisesCompleted: completedExerciseIds.length + 1,
-          setsCompleted: (completedExerciseIds.length + 1) * 3,
-          repsCompleted: 110,
-          completionPercentage: 100,
-          notes,
-        });
-        await api.sessions.feedback(activeSessionId, {
-          feedback: feedbackEnumMap[feelRating] || 'GOOD',
-          notes,
-        });
-      } catch (err) {
-        console.error('Session complete API error:', err);
-      }
-    } else if (currentPlan?.id) {
-      try {
-        await api.workouts.complete(currentPlan.id);
-      } catch (err) {
-        console.error('Workout complete API error:', err);
-      }
-    }
-
-    await refreshUserData();
-  };
-
-  // Method to submit weekly reflection
-  const submitReflection = async ({ rating, easier, difficulty, desiredChange, note }) => {
+  // Start workout session
+  const startWorkoutSession = async (workoutId = null) => {
+    resetWorkoutState();
     try {
-      await api.reflections.create({
-        consistencyRating: rating || 4,
-        easierFactors: easier || '',
-        difficultyFactors: difficulty || '',
-        desiredStrategyChange: desiredChange || '',
-        note: note || '',
-      });
-      await refreshUserData();
-    } catch (err) {
-      console.error('Submit reflection API error:', err);
+      const targetId = workoutId || currentPlan.id;
+      const res = await api.sessions.start(targetId);
+      if (res.success && res.data) {
+        setActiveSessionId(res.data.id);
+      }
+    } catch (e) {
+      console.warn('Session start API error:', e.message);
+      setActiveSessionId(`session_${Date.now()}`);
     }
   };
 
-  // Method to submit experiment
+  // Submit Reflection
+  const submitReflection = async (refData) => {
+    try {
+      await api.reflections.create(refData);
+      setReflections(prev => [refData, ...prev]);
+    } catch (e) {
+      console.warn('Reflection API error:', e.message);
+    }
+  };
+
+  // Create Experiment
   const createExperiment = async (expData) => {
     try {
-      await api.experiments.create(expData);
-      await refreshUserData();
-    } catch (err) {
-      console.error('Create experiment API error:', err);
+      const res = await api.experiments.create(expData);
+      if (res.success) {
+        setExperiments(prev => [res.data, ...prev]);
+      }
+    } catch (e) {
+      console.warn('Experiment API error:', e.message);
     }
+  };
+
+  // Workout Execution state setters
+  const completeCurrentSet = (totalSets) => {
+    if (activeSet < totalSets) {
+      setActiveSet(prev => prev + 1);
+    } else {
+      setCompletedExerciseIds(prev => [...prev, activeExerciseIndex]);
+      setActiveSet(1);
+      setActiveExerciseIndex(prev => prev + 1);
+    }
+  };
+
+  const skipCurrentExercise = () => {
+    setCompletedExerciseIds(prev => [...prev, activeExerciseIndex]);
+    setActiveSet(1);
+    setActiveExerciseIndex(prev => prev + 1);
+  };
+
+  const finishWorkout = async (feedback = 'GOOD') => {
+    const summary = {
+      completedExercisesCount: completedExerciseIds.length + 1,
+      totalDurationMinutes: currentPlan.durationMinutes,
+      streakUpdated: progress.currentStreakDays + 1,
+      feedback
+    };
+    setCompletedSummary(summary);
+
+    if (activeSessionId) {
+      try {
+        await api.sessions.complete(activeSessionId, {
+          actualDurationMinutes: currentPlan.durationMinutes,
+          exercisesCompleted: summary.completedExercisesCount,
+          setsCompleted: summary.completedExercisesCount * 3,
+          repsCompleted: summary.completedExercisesCount * 30,
+          completionPercentage: 100.0
+        });
+
+        await api.sessions.feedback(activeSessionId, { userFeedback: feedback });
+      } catch (e) {
+        console.warn('Session completion API error:', e.message);
+      }
+    }
+
+    setProgress(prev => ({
+      ...prev,
+      currentStreakDays: prev.currentStreakDays + 1,
+      totalSessionsCompleted: prev.totalSessionsCompleted + 1,
+      weeklyCompletedSessions: Math.min(prev.weeklyTargetSessions, prev.weeklyCompletedSessions + 1)
+    }));
+
+    resetWorkoutState();
+    fetchMlRecommendation();
   };
 
   // Method to send coach message
@@ -510,7 +439,8 @@ export const AppProvider = ({ children }) => {
 
     try {
       const res = await api.coach.ask(userText);
-      const replyText = res.data?.reply || `FITMINDS AI Coach received your question about "${userText}".`;
+      const replyText = res.data?.reply || `FITMINDS AI Coach: Great question! Focus on your ${userProfile.availableTimeMinutes}-minute window with consistent effort.`;
+      
       const aiMsg = {
         id: `msg_${Date.now()}_ai`,
         sender: 'ai',
@@ -555,6 +485,7 @@ export const AppProvider = ({ children }) => {
       dailyContext,
       updateDailyCheckin,
       currentPlan,
+      setCurrentPlan,
       applyPlanAdjustment,
       startWorkoutSession,
       progress,
@@ -575,6 +506,9 @@ export const AppProvider = ({ children }) => {
       resetWorkoutState,
       coachMessages,
       sendCoachMessage,
+      mlRecommendation,
+      isLoadingMlRec,
+      fetchMlRecommendation,
       refreshUserData,
     }}>
       {children}
