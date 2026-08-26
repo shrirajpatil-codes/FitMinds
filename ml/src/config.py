@@ -11,7 +11,7 @@ DATA_DIR = os.path.join(BASE_DIR, "data")
 PROCESSED_DATA_DIR = os.path.join(DATA_DIR, "processed")
 MODELS_DIR = os.path.join(BASE_DIR, "models")
 
-MODEL_VERSION = "workout-recommender-v1"
+MODEL_VERSION = "workout-recommender-v2-dynamic"
 MODEL_FILE_PATH = os.path.join(MODELS_DIR, "workout_recommender.joblib")
 METADATA_FILE_PATH = os.path.join(MODELS_DIR, "model_metadata.json")
 
@@ -230,9 +230,18 @@ DIFFICULTY_MAP = {
     "ADVANCED": 3
 }
 
+BMI_CATEGORY_MAP = {
+    "Underweight": 1,
+    "Normal weight": 2,
+    "Overweight": 3,
+    "Obese": 4
+}
+
 FEATURE_COLUMNS = [
     # User Profile Features
     "user_age",
+    "user_bmi",
+    "user_bmi_category_num",
     "user_experience_num",
     "user_goal_num",
     "user_pref_time",

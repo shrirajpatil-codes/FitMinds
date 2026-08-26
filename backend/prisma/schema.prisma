@@ -116,6 +116,11 @@ model Profile {
   userId                 String                 @unique
   user                   User                   @relation(fields: [userId], references: [id], onDelete: Cascade)
   age                    Int?
+  heightCm               Float?
+  weightKg               Float?
+  targetWeightKg         Float?
+  bmi                    Float?
+  bmiCategory            String?
   fitnessExperience     FitnessExperience      @default(BEGINNER)
   fitnessGoal            FitnessGoal            @default(FITNESS)
   availableWorkoutTime   Int                    @default(20)

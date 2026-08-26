@@ -1,11 +1,12 @@
 const { prisma } = require('../config/database');
 const { hashPassword, comparePassword } = require('../utils/password');
 const { generateToken } = require('../utils/jwt');
-const { successResponse, errorResponse } = require('../utils/response');
+const { successResponse, errorResponse } = { ...require('../utils/response') };
+const { calculateBMI, getBMICategory } = require('../utils/bmi');
 
 async function register(req, res, next) {
   try {
-    const { name, email, password } = req.body;
+    const { name, email, password, heightCm, weightKg, targetWeightKg, fitnessGoal, age } = req.body;
 
     if (!name || !email || !password) {
       return errorResponse(res, 'Please provide name, email, and password.', 400);
@@ -26,6 +27,13 @@ async function register(req, res, next) {
 
     const passwordHash = await hashPassword(password);
 
+    // Calculate BMI & Category if height and weight provided
+    const parsedHeight = heightCm ? parseFloat(heightCm) : null;
+    const parsedWeight = weightKg ? parseFloat(weightKg) : null;
+    const parsedTargetWeight = targetWeightKg ? parseFloat(targetWeightKg) : null;
+    const bmi = calculateBMI(parsedWeight, parsedHeight);
+    const bmiCategory = bmi ? getBMICategory(bmi) : null;
+
     const user = await prisma.user.create({
       data: {
         name: name.trim(),
@@ -33,7 +41,14 @@ async function register(req, res, next) {
         passwordHash,
         profile: {
           create: {
-            onboardingCompleted: false,
+            age: age ? parseInt(age, 10) : 22,
+            heightCm: parsedHeight,
+            weightKg: parsedWeight,
+            targetWeightKg: parsedTargetWeight,
+            bmi: bmi,
+            bmiCategory: bmiCategory,
+            fitnessGoal: fitnessGoal || 'FITNESS',
+            onboardingCompleted: !!(parsedHeight && parsedWeight),
           },
         },
       },
@@ -54,6 +69,7 @@ async function register(req, res, next) {
           email: user.email,
           onboardingCompleted: user.profile?.onboardingCompleted || false,
         },
+        profile: user.profile,
       },
       'Registration successful',
       201

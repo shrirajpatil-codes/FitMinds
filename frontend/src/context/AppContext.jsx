@@ -84,6 +84,11 @@ export const AppProvider = ({ children }) => {
             name: meRes.data.name || prev.name,
             email: meRes.data.email || prev.email,
             age: p.age || prev.age,
+            heightCm: p.heightCm || prev.heightCm || 175,
+            weightKg: p.weightKg || prev.weightKg || 70,
+            targetWeightKg: p.targetWeightKg || prev.targetWeightKg || 65,
+            bmi: p.bmi || prev.bmi || 22.86,
+            bmiCategory: p.bmiCategory || prev.bmiCategory || 'Normal weight',
             fitnessLevel: p.fitnessExperience || prev.fitnessLevel,
             goal: p.fitnessGoal || prev.goal,
             availableTimeMinutes: p.availableWorkoutTime || prev.availableTimeMinutes,
@@ -213,11 +218,11 @@ export const AppProvider = ({ children }) => {
     }
   };
 
-  const registerUser = async (name, email, password) => {
+  const registerUser = async (name, email, password, extraProfileData = {}) => {
     setIsLoadingAuth(true);
     setAuthError(null);
     try {
-      const res = await api.auth.register(name, email, password);
+      const res = await api.auth.register(name, email, password, extraProfileData);
       if (res.success && res.data?.token) {
         localStorage.setItem('FITMINDS_TOKEN', res.data.token);
         setToken(res.data.token);
@@ -245,7 +250,7 @@ export const AppProvider = ({ children }) => {
   const updateProfileData = async (updatedFields) => {
     setUserProfile(prev => ({ ...prev, ...updatedFields }));
     try {
-      await api.profile.update({
+      const res = await api.profile.update({
         fitnessGoal: updatedFields.goal || userProfile.goal,
         fitnessExperience: updatedFields.fitnessLevel || userProfile.fitnessLevel,
         availableWorkoutTime: parseInt(updatedFields.availableTimeMinutes || userProfile.availableTimeMinutes, 10),
@@ -253,7 +258,22 @@ export const AppProvider = ({ children }) => {
         equipment: updatedFields.equipment || userProfile.equipment,
         lifestyleLoad: updatedFields.lifestyleLoad || userProfile.lifestyleLoad,
         age: parseInt(updatedFields.age || userProfile.age, 10),
+        heightCm: updatedFields.heightCm !== undefined ? parseFloat(updatedFields.heightCm) : userProfile.heightCm,
+        weightKg: updatedFields.weightKg !== undefined ? parseFloat(updatedFields.weightKg) : userProfile.weightKg,
+        targetWeightKg: updatedFields.targetWeightKg !== undefined ? parseFloat(updatedFields.targetWeightKg) : userProfile.targetWeightKg,
       });
+
+      if (res.success && res.data) {
+        setUserProfile(prev => ({
+          ...prev,
+          heightCm: res.data.heightCm,
+          weightKg: res.data.weightKg,
+          targetWeightKg: res.data.targetWeightKg,
+          bmi: res.data.bmi,
+          bmiCategory: res.data.bmiCategory,
+        }));
+      }
+
       fetchMlRecommendation();
     } catch (e) {
       console.warn('Backend profile update failed:', e.message);

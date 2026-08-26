@@ -1,6 +1,7 @@
 """
-FITMINDS ML Recommendation Inference Engine
+FITMINDS ML Recommendation Inference Engine (v2 Dynamic)
 Accepts User Context JSON via CLI/stdin, scores candidate workouts using trained model,
+applies recency rotation penalties to ensure non-repetitive workouts across logins,
 ranks workouts, builds decision factor explanations, and outputs JSON response.
 """
 
@@ -24,16 +25,25 @@ from config import (
 from feature_engineering import extract_numeric_features
 
 def build_recommendation_factors(user_profile, current_state, recommended_workout, score):
-    """Generates human-readable factors based on feature alignment."""
+    """Generates human-readable factors based on feature & BMI alignment."""
     factors = []
     
     today_time = current_state.get("availableTimeMinutes") or user_profile.get("availableWorkoutTime", 20)
     workout_dur = recommended_workout.get("durationMinutes")
     energy = current_state.get("energyLevel", 3)
     user_goal = user_profile.get("fitnessGoal", "FITNESS")
+    
+    bmi = user_profile.get("bmi")
+    bmi_cat = user_profile.get("bmiCategory", "Normal weight")
 
     if abs(today_time - workout_dur) <= 5:
         factors.append(f"Fits your available time window ({today_time} mins)")
+
+    if bmi:
+        if user_goal == "WEIGHT_LOSS" and (bmi >= 25.0 or bmi_cat in ["Overweight", "Obese"]):
+            factors.append(f"Calorie-dense circuit tailored for BMI {bmi} ({bmi_cat}) weight loss goal")
+        elif user_goal == "WEIGHT_GAIN" and (bmi < 18.5 or bmi_cat == "Underweight"):
+            factors.append(f"Hypertrophy stimulus optimized for BMI {bmi} ({bmi_cat}) weight gain goal")
 
     if energy <= 2 and recommended_workout.get("intensity") == "LOW":
         factors.append("Low-intensity recovery matches your reported low energy today")
@@ -47,13 +57,13 @@ def build_recommendation_factors(user_profile, current_state, recommended_workou
         factors.append(f"Requires equipment you have available ({recommended_workout.get('equipment')})")
 
     if len(factors) < 2:
-        factors.append("Optimized for consistent completion probability")
+        factors.append("Optimized by ML for dynamic routine variation and completion probability")
 
     return factors
 
 def recommend_workout_for_user(user_context):
     """
-    Core Inference Function.
+    Core Inference Function with Dynamic Rotation.
     user_context = {
       "user_profile": {...},
       "current_state": {...},
@@ -64,43 +74,55 @@ def recommend_workout_for_user(user_context):
     current_state = user_context.get("current_state", {})
     history = user_context.get("history", {})
 
-    # Detect cold start user (no workout history)
+    recent_workout_ids = history.get("recentWorkoutIds", [])
+
     is_cold_start = not history or (history.get("workoutsCompleted7d", 0) == 0 and history.get("workoutsSkipped7d", 0) == 0)
 
     # 1. Load Model Bundle
     if not os.path.exists(MODEL_FILE_PATH):
-        return get_fallback_recommendation(user_profile, current_state, is_cold_start)
+        return get_fallback_recommendation(user_profile, current_state, recent_workout_ids, is_cold_start)
 
     try:
         bundle = joblib.load(MODEL_FILE_PATH)
         regressor = bundle["regressor"]
     except Exception as e:
-        return get_fallback_recommendation(user_profile, current_state, is_cold_start)
+        return get_fallback_recommendation(user_profile, current_state, recent_workout_ids, is_cold_start)
 
-    # 2. Score Candidate Workouts
+    # 2. Score Candidate Workouts & Apply Recency Rotation Penalty
     scored_workouts = []
     
     for workout in CANDIDATE_WORKOUTS:
         feat_dict = extract_numeric_features(user_profile, current_state, history, workout)
         X_vec = pd.DataFrame([feat_dict])[FEATURE_COLUMNS]
         
-        # ML Model Predict Suitability Score
-        score = float(regressor.predict(X_vec)[0])
-        score = round(float(np.clip(score, 0.05, 0.99)), 3)
+        # Raw ML Model Predict Score
+        raw_score = float(regressor.predict(X_vec)[0])
+        
+        # Dynamic Recency Penalty (Prevents repeating the same workout)
+        recency_penalty = 0.0
+        if recent_workout_ids:
+            if workout["id"] == recent_workout_ids[0]:
+                recency_penalty = 0.35 # Heavy penalty for most recent workout
+            elif len(recent_workout_ids) > 1 and workout["id"] == recent_workout_ids[1]:
+                recency_penalty = 0.20 # Moderate penalty for 2nd recent workout
+
+        final_score = raw_score - recency_penalty
+        final_score = round(float(np.clip(final_score, 0.05, 0.99)), 3)
         
         scored_workouts.append({
             "workout": workout,
-            "score": score
+            "score": final_score,
+            "raw_score": round(raw_score, 3)
         })
 
-    # 3. Sort by score descending
+    # 3. Sort by final score descending
     scored_workouts.sort(key=lambda x: x["score"], reverse=True)
 
     top_item = scored_workouts[0]
     rec_workout = top_item["workout"]
     rec_score = top_item["score"]
 
-    # 4. Alternatives (Top 2 and Top 3)
+    # 4. Alternatives (Top 2, Top 3, Top 4)
     alternatives = []
     for item in scored_workouts[1:4]:
         w = item["workout"]
@@ -127,13 +149,19 @@ def recommend_workout_for_user(user_context):
         }
     }
 
-def get_fallback_recommendation(user_profile, current_state, is_cold_start=True):
-    """Safely handles fallback if model file is unavailable."""
+def get_fallback_recommendation(user_profile, current_state, recent_workout_ids=None, is_cold_start=True):
+    """Safely handles fallback with rotation if model file is unavailable."""
     avail_time = current_state.get("availableTimeMinutes") or user_profile.get("availableWorkoutTime", 20)
-    
-    best_w = CANDIDATE_WORKOUTS[0]
+    recent_ids = recent_workout_ids or []
+
+    # Pick candidate that matches time best and wasn't done recently
+    candidates = [w for w in CANDIDATE_WORKOUTS if w["id"] not in recent_ids]
+    if not candidates:
+        candidates = CANDIDATE_WORKOUTS
+
+    best_w = candidates[0]
     min_delta = 999
-    for w in CANDIDATE_WORKOUTS:
+    for w in candidates:
         delta = abs(w["durationMinutes"] - avail_time)
         if delta < min_delta:
             min_delta = delta
@@ -143,16 +171,16 @@ def get_fallback_recommendation(user_profile, current_state, is_cold_start=True)
         "success": True,
         "data": {
             "recommendedWorkout": best_w,
-            "score": 0.75,
+            "score": 0.80,
             "alternatives": [
-                {"id": CANDIDATE_WORKOUTS[1]["id"], "title": CANDIDATE_WORKOUTS[1]["title"], "durationMinutes": CANDIDATE_WORKOUTS[1]["durationMinutes"], "difficulty": CANDIDATE_WORKOUTS[1]["difficulty"], "score": 0.70}
+                {"id": CANDIDATE_WORKOUTS[1]["id"], "title": CANDIDATE_WORKOUTS[1]["title"], "durationMinutes": CANDIDATE_WORKOUTS[1]["durationMinutes"], "difficulty": CANDIDATE_WORKOUTS[1]["difficulty"], "score": 0.75}
             ],
             "factors": [
                 f"Matched to your current available time ({avail_time} mins)",
-                "Fallback heuristic recommendation active"
+                "Rotated routine based on recent session history"
             ],
             "isColdStart": is_cold_start,
-            "modelVersion": "fallback-heuristic-v1"
+            "modelVersion": "fallback-heuristic-v2"
         }
     }
 
@@ -164,24 +192,17 @@ if __name__ == "__main__":
             with open(raw_arg, "r") as f:
                 input_data = json.load(f)
         else:
-            input_data = json.loads(raw_arg)
-
-    if not input_data:
-        # Check stdin if available without blocking indefinitely
-        if not sys.stdin.isatty():
             try:
-                stdin_content = sys.stdin.read().strip()
-                if stdin_content:
-                    input_data = json.loads(stdin_content)
+                input_data = json.loads(raw_arg)
             except Exception:
                 pass
 
     if not input_data:
         # Default test sample payload
         input_data = {
-            "user_profile": {"age": 22, "fitnessGoal": "STRENGTH", "fitnessExperience": "INTERMEDIATE", "availableWorkoutTime": 20, "equipment": "BASIC", "lifestyleLoad": "MODERATE"},
+            "user_profile": {"age": 22, "heightCm": 175, "weightKg": 75, "bmi": 24.49, "bmiCategory": "Normal weight", "fitnessGoal": "WEIGHT_LOSS", "fitnessExperience": "INTERMEDIATE", "availableWorkoutTime": 20, "equipment": "BASIC", "lifestyleLoad": "MODERATE"},
             "current_state": {"energyLevel": 4, "readinessLevel": 4, "availableTimeMinutes": 20, "academicLoad": "MODERATE"},
-            "history": {"workoutsCompleted7d": 4, "workoutsSkipped7d": 1, "currentStreakDays": 3, "avgCompletedDuration": 20.0, "tooDifficultFrequency": 0.1}
+            "history": {"recentWorkoutIds": ["W007"], "workoutsCompleted7d": 4, "workoutsSkipped7d": 1, "currentStreakDays": 3, "avgCompletedDuration": 20.0}
         }
 
     result = recommend_workout_for_user(input_data)

@@ -254,15 +254,15 @@ export const DashboardPage = () => {
                   <Battery className="w-3.5 h-3.5 text-emerald-400" />
                   Energy Level
                 </div>
-                <span className="text-sm font-bold text-slate-100">{dailyContext.energyLevel}</span>
+                <span className="text-sm font-bold text-slate-100">{dailyContext.energyLevel} / 5</span>
               </div>
 
               <div className="p-3 rounded-xl bg-slate-900 border border-slate-800">
                 <div className="flex items-center gap-1.5 text-slate-400 text-xs mb-1">
-                  <Calendar className="w-3.5 h-3.5 text-sky-400" />
-                  Preferred Window
+                  <TrendingUp className="w-3.5 h-3.5 text-indigo-400" />
+                  Body BMI
                 </div>
-                <span className="text-sm font-bold text-slate-100">{dailyContext.scheduleWindow}</span>
+                <span className="text-sm font-bold text-slate-100">{userProfile.bmi || 22.8} <span className="text-[10px] font-normal text-indigo-300">({userProfile.bmiCategory || 'Normal'})</span></span>
               </div>
 
               <div className="p-3 rounded-xl bg-slate-900 border border-slate-800">

@@ -31,11 +31,17 @@ def train_recommender_model():
     print("[FITMINDS ML] Starting Workout Recommender Model Training...")
 
     csv_path = os.path.join(PROCESSED_DATA_DIR, "workout_synthetic_dataset.csv")
-    if not os.path.exists(csv_path):
+    
+    if os.path.exists(csv_path):
+        df = pd.read_csv(csv_path)
+        # Check if all feature columns are present
+        missing_cols = [c for c in FEATURE_COLUMNS if c not in df.columns]
+        if missing_cols:
+            print(f"[DATA] Missing columns {missing_cols} in old CSV. Regenerating dataset...")
+            df = generate_synthetic_dataset(num_samples=1500, output_csv_path=csv_path)
+    else:
         print("[DATA] Dataset not found. Generating 1,500 synthetic development samples...")
         df = generate_synthetic_dataset(num_samples=1500, output_csv_path=csv_path)
-    else:
-        df = pd.read_csv(csv_path)
 
     print(f"[DATA] Loaded dataset: {len(df)} rows across {len(FEATURE_COLUMNS)} input features.")
 

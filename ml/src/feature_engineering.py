@@ -11,16 +11,36 @@ from config import (
     ACADEMIC_LOAD_MAP,
     INTENSITY_MAP,
     DIFFICULTY_MAP,
+    BMI_CATEGORY_MAP,
     FEATURE_COLUMNS
 )
 
 def extract_numeric_features(user_profile, current_state, history, workout):
     """
     Constructs a single feature dictionary for a (User Context, Candidate Workout) pair.
-    NO future data leakage: only uses information observable BEFORE workout recommendation.
     """
     # 1. User Profile Features
     user_age = int(user_profile.get("age", 21) or 21)
+    
+    height_cm = float(user_profile.get("heightCm", 175) or 175)
+    weight_kg = float(user_profile.get("weightKg", 70) or 70)
+    
+    # Calculate BMI
+    bmi = user_profile.get("bmi")
+    if not bmi:
+        height_m = height_cm / 100.0
+        bmi = round(weight_kg / (height_m * height_m), 2)
+    else:
+        bmi = float(bmi)
+
+    bmi_cat = user_profile.get("bmiCategory", "Normal weight")
+    if not bmi_cat:
+        if bmi < 18.5: bmi_cat = "Underweight"
+        elif bmi < 25.0: bmi_cat = "Normal weight"
+        elif bmi < 30.0: bmi_cat = "Overweight"
+        else: bmi_cat = "Obese"
+    bmi_cat_num = BMI_CATEGORY_MAP.get(bmi_cat, 2)
+
     user_exp = user_profile.get("fitnessExperience", "BEGINNER")
     user_exp_num = EXPERIENCE_MAP.get(user_exp, 1)
     
@@ -70,12 +90,20 @@ def extract_numeric_features(user_profile, current_state, history, workout):
 
     # 5. Interaction / Alignment Features
     time_delta_mins = abs(today_avail_time - workout_dur)
-    goal_matched = 1.0 if user_goal_num == workout_goal_num or (user_goal in ["STRENGTH", "WEIGHT_GAIN"] and workout_goal in ["STRENGTH", "WEIGHT_GAIN"]) or (user_goal in ["WEIGHT_LOSS", "FITNESS"] and workout_goal in ["WEIGHT_LOSS", "FITNESS"]) else 0.0
+    
+    goal_matched = 1.0 if (
+        user_goal_num == workout_goal_num or
+        (user_goal in ["STRENGTH", "WEIGHT_GAIN"] and workout_goal in ["STRENGTH", "WEIGHT_GAIN"]) or
+        (user_goal in ["WEIGHT_LOSS", "FITNESS"] and workout_goal in ["WEIGHT_LOSS", "FITNESS"])
+    ) else 0.0
+
     equipment_feasible = 1.0 if workout_eq_num <= user_eq_num else 0.0
     difficulty_matched = 1.0 if workout_diff_num <= (user_exp_num + (1 if energy_level >= 4 else 0)) else 0.0
 
     features = {
         "user_age": user_age,
+        "user_bmi": bmi,
+        "user_bmi_category_num": bmi_cat_num,
         "user_experience_num": user_exp_num,
         "user_goal_num": user_goal_num,
         "user_pref_time": user_pref_time,

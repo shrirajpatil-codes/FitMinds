@@ -41,11 +41,13 @@ async function request(endpoint, options = {}) {
 export const api = {
   // Auth
   auth: {
-    register: (name, email, password) =>
-      request('/auth/register', {
+    register: (name, email, password, extraData = {}) => {
+      const payload = typeof name === 'object' ? name : { name, email, password, ...extraData };
+      return request('/auth/register', {
         method: 'POST',
-        body: JSON.stringify({ name, email, password }),
-      }),
+        body: JSON.stringify(payload),
+      });
+    },
     login: (email, password) =>
       request('/auth/login', {
         method: 'POST',

@@ -181,7 +181,7 @@ const CANDIDATE_WORKOUTS = [
 ];
 
 /**
- * Gathers user profile, today's check-in, and recent historical sessions from Prisma DB.
+ * Gathers user profile (with BMI), today's check-in, and recent historical sessions from Prisma DB.
  */
 async function getUserMLContext(userId) {
   const profile = await prisma.profile.findUnique({ where: { userId } });
@@ -198,7 +198,9 @@ async function getUserMLContext(userId) {
     where: {
       userId,
       startedAt: { gte: sevenDaysAgo }
-    }
+    },
+    orderBy: { startedAt: 'desc' },
+    take: 5
   });
 
   const recentPlans = await prisma.workoutPlan.findMany({
@@ -217,16 +219,25 @@ async function getUserMLContext(userId) {
   });
   const avgCompletedDur = completedCount > 0 ? (totalDuration / completedCount) : (profile?.availableWorkoutTime || 20);
 
+  // Extract recent completed workout IDs for rotation penalty
+  const recentWorkoutIds = recentSessions.map(s => s.workoutId).filter(Boolean);
+
   const history = {
     workoutsCompleted7d: completedCount,
     workoutsSkipped7d: skippedCount,
     currentStreakDays: completedCount > 0 ? completedCount : 0,
     avgCompletedDuration: avgCompletedDur,
-    tooDifficultFrequency: 0.1
+    tooDifficultFrequency: 0.1,
+    recentWorkoutIds
   };
 
   const user_profile = {
     age: profile?.age || 21,
+    heightCm: profile?.heightCm || 175,
+    weightKg: profile?.weightKg || 70,
+    targetWeightKg: profile?.targetWeightKg || 65,
+    bmi: profile?.bmi || 22.86,
+    bmiCategory: profile?.bmiCategory || 'Normal weight',
     fitnessExperience: profile?.fitnessExperience || 'BEGINNER',
     fitnessGoal: profile?.fitnessGoal || 'FITNESS',
     availableWorkoutTime: profile?.availableWorkoutTime || 20,
@@ -293,10 +304,11 @@ async function predictWorkoutRecommendation(userId) {
  * JavaScript Fallback Recommender if Python execution is unavailable.
  */
 function getFallbackRecommendation(userContext, isColdStart) {
-  const { user_profile, current_state } = userContext;
+  const { user_profile, current_state, history } = userContext;
   const targetTime = current_state.availableTimeMinutes || user_profile.availableWorkoutTime || 20;
   const energy = current_state.energyLevel || 3;
   const userGoal = user_profile.fitnessGoal || 'FITNESS';
+  const recentIds = history?.recentWorkoutIds || [];
 
   let scored = CANDIDATE_WORKOUTS.map(w => {
     let score = 0.5;
@@ -311,6 +323,11 @@ function getFallbackRecommendation(userContext, isColdStart) {
     if (energy <= 2 && w.intensity === 'HIGH') score -= 0.30;
 
     if (w.goal === userGoal) score += 0.15;
+
+    // Apply rotation penalty for recent workouts
+    if (recentIds.includes(w.id)) {
+      score -= 0.30;
+    }
 
     score = Math.max(0.1, Math.min(0.98, score));
     return { workout: w, score: Number(score.toFixed(3)) };
@@ -331,7 +348,8 @@ function getFallbackRecommendation(userContext, isColdStart) {
 
   const factors = [
     `Fits your current time availability (${targetTime} mins)`,
-    energy <= 2 ? "Selected low-intensity option for low energy state" : `Aligned with your target goal (${userGoal.replace('_', ' ')})`
+    energy <= 2 ? "Selected low-intensity option for low energy state" : `Aligned with your target goal (${userGoal.replace('_', ' ')})`,
+    "Rotated routine based on recent workout history"
   ];
 
   return {
@@ -342,7 +360,7 @@ function getFallbackRecommendation(userContext, isColdStart) {
       alternatives,
       factors,
       isColdStart,
-      modelVersion: "fallback-js-heuristic-v1"
+      modelVersion: "fallback-js-heuristic-v2"
     }
   };
 }
