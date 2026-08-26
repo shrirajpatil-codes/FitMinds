@@ -41,7 +41,7 @@ function makeRequest(url, method = 'POST', body = null, token = null) {
 }
 
 async function testCoachApi() {
-  console.log('🧪 Testing AI Coach REST API Endpoint...\n');
+  console.log('🧪 Testing AI Coach REST API Endpoint with multiple exercise queries...\n');
 
   // Login
   const loginRes = await makeRequest(`${API_BASE}/auth/login`, 'POST', {
@@ -55,21 +55,25 @@ async function testCoachApi() {
     return;
   }
 
-  // Ask Weight Gain
-  const res1 = await makeRequest(`${API_BASE}/coach/ask`, 'POST', { message: 'How do I gain weight and build muscle?' }, token);
-  console.log('1️⃣ Question: Weight Gain & Muscle');
-  console.log('Response Status:', res1.status);
+  // 1. Pushup Question
+  const res1 = await makeRequest(`${API_BASE}/coach/ask`, 'POST', { message: 'how to do pushup' }, token);
+  console.log('1️⃣ Question: "how to do pushup"');
   console.log('Reply:\n', res1.body.data?.reply);
   console.log('\n-----------------------------------\n');
 
-  // Ask Weight Loss
-  const res2 = await makeRequest(`${API_BASE}/coach/ask`, 'POST', { message: 'What is the best weight loss plan?' }, token);
-  console.log('2️⃣ Question: Weight Loss');
-  console.log('Response Status:', res2.status);
+  // 2. Squat Question
+  const res2 = await makeRequest(`${API_BASE}/coach/ask`, 'POST', { message: 'how to do squat' }, token);
+  console.log('2️⃣ Question: "how to do squat"');
   console.log('Reply:\n', res2.body.data?.reply);
   console.log('\n-----------------------------------\n');
 
-  console.log('✅ AI Coach API Test Completed Successfully!');
+  // 3. Biceps Question
+  const res3 = await makeRequest(`${API_BASE}/coach/ask`, 'POST', { message: 'best biceps workout for student' }, token);
+  console.log('3️⃣ Question: "best biceps workout for student"');
+  console.log('Reply:\n', res3.body.data?.reply);
+  console.log('\n-----------------------------------\n');
+
+  console.log('✅ AI Coach Test Completed Successfully!');
 }
 
 testCoachApi().catch(console.error);
