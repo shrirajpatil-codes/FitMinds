@@ -36,9 +36,9 @@ export const RegisterPage = () => {
 
   const totalSteps = 4;
 
-  // Live BMI calculation
-  const hM = parseFloat(heightCm) / 100.0;
-  const wKg = parseFloat(weightKg);
+  // Safe Live BMI calculation
+  const hM = (heightCm && parseFloat(heightCm) > 0) ? parseFloat(heightCm) / 100.0 : 0;
+  const wKg = (weightKg && parseFloat(weightKg) > 0) ? parseFloat(weightKg) : 0;
   const liveBmi = (hM > 0 && wKg > 0) ? (wKg / (hM * hM)).toFixed(1) : null;
 
   let bmiCat = 'Normal weight';
@@ -60,46 +60,53 @@ export const RegisterPage = () => {
     }
   }
 
-  const handleNextStep = (e) => {
-    e?.preventDefault();
+  const validateCurrentStep = () => {
     setErrorMsg('');
 
     if (step === 1) {
-      if (!name.trim()) {
+      if (!name || !name.trim()) {
         setErrorMsg('Please enter your full name.');
-        return;
+        return false;
       }
-      if (!email.trim() || !email.includes('@')) {
+      if (!email || !email.trim() || !email.includes('@')) {
         setErrorMsg('Please enter a valid student email address.');
-        return;
+        return false;
       }
-      if (password.length < 6) {
+      if (!password || password.length < 6) {
         setErrorMsg('Password must be at least 6 characters long.');
-        return;
+        return false;
       }
       if (password !== confirmPassword) {
         setErrorMsg('Passwords do not match.');
-        return;
+        return false;
       }
     }
 
     if (step === 3) {
       if (!heightCm || parseFloat(heightCm) <= 0) {
         setErrorMsg('Please enter a valid height in cm.');
-        return;
+        return false;
       }
       if (!weightKg || parseFloat(weightKg) <= 0) {
         setErrorMsg('Please enter a valid weight in kg.');
-        return;
+        return false;
       }
     }
 
-    if (step < totalSteps) {
-      setStep((prev) => prev + 1);
+    return true;
+  };
+
+  const handleNextStep = (e) => {
+    if (e) e.preventDefault();
+    if (validateCurrentStep()) {
+      if (step < totalSteps) {
+        setStep((prev) => prev + 1);
+      }
     }
   };
 
-  const handlePrevStep = () => {
+  const handlePrevStep = (e) => {
+    if (e) e.preventDefault();
     setErrorMsg('');
     if (step > 1) {
       setStep((prev) => prev - 1);
@@ -107,8 +114,40 @@ export const RegisterPage = () => {
   };
 
   const handleSubmit = async (e) => {
-    e.preventDefault();
+    if (e) e.preventDefault();
     setErrorMsg('');
+
+    // Full validation before submission
+    if (!name || !name.trim()) {
+      setStep(1);
+      setErrorMsg('Please enter your full name.');
+      return;
+    }
+    if (!email || !email.trim() || !email.includes('@')) {
+      setStep(1);
+      setErrorMsg('Please enter a valid student email address.');
+      return;
+    }
+    if (!password || password.length < 6) {
+      setStep(1);
+      setErrorMsg('Password must be at least 6 characters long.');
+      return;
+    }
+    if (password !== confirmPassword) {
+      setStep(1);
+      setErrorMsg('Passwords do not match.');
+      return;
+    }
+    if (!heightCm || parseFloat(heightCm) <= 0) {
+      setStep(3);
+      setErrorMsg('Please enter a valid height in cm.');
+      return;
+    }
+    if (!weightKg || parseFloat(weightKg) <= 0) {
+      setStep(3);
+      setErrorMsg('Please enter a valid weight in kg.');
+      return;
+    }
 
     setLoading(true);
     const result = await registerUser(name, email, password, {
@@ -123,7 +162,7 @@ export const RegisterPage = () => {
     if (result && result.success) {
       navigate('/dashboard');
     } else {
-      setErrorMsg(result?.error || 'Registration failed. Please try again.');
+      setErrorMsg(result?.message || result?.error || 'Registration failed. Please try again.');
     }
   };
 
@@ -148,14 +187,14 @@ export const RegisterPage = () => {
 
         {/* Error Alert */}
         {errorMsg && (
-          <Alert variant="danger" title="Validation Error" icon={AlertCircle}>
+          <Alert variant="danger" title="Registration Error" icon={AlertCircle}>
             {errorMsg}
           </Alert>
         )}
 
         {/* Register Form Card */}
         <Card variant="default" className="p-6 md:p-8 min-h-[380px] flex flex-col justify-between">
-          <form onSubmit={step === totalSteps ? handleSubmit : handleNextStep} className="space-y-6 flex-1 flex flex-col justify-between">
+          <form onSubmit={(e) => e.preventDefault()} className="space-y-6 flex-1 flex flex-col justify-between">
             
             {/* STEP 1: Account Credentials */}
             {step === 1 && (
@@ -175,7 +214,6 @@ export const RegisterPage = () => {
                   leftIcon={User}
                   value={name}
                   onChange={(e) => setName(e.target.value)}
-                  required
                 />
 
                 <Input
@@ -185,7 +223,6 @@ export const RegisterPage = () => {
                   leftIcon={Mail}
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
-                  required
                 />
 
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -196,7 +233,6 @@ export const RegisterPage = () => {
                     leftIcon={Lock}
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
-                    required
                   />
 
                   <Input
@@ -206,7 +242,6 @@ export const RegisterPage = () => {
                     leftIcon={Lock}
                     value={confirmPassword}
                     onChange={(e) => setConfirmPassword(e.target.value)}
-                    required
                   />
                 </div>
               </div>
@@ -297,7 +332,6 @@ export const RegisterPage = () => {
                     leftIcon={Ruler}
                     value={heightCm}
                     onChange={(e) => setHeightCm(e.target.value)}
-                    required
                   />
 
                   <Input
@@ -307,7 +341,6 @@ export const RegisterPage = () => {
                     leftIcon={Scale}
                     value={weightKg}
                     onChange={(e) => setWeightKg(e.target.value)}
-                    required
                   />
                 </div>
 
@@ -397,17 +430,19 @@ export const RegisterPage = () => {
 
               {step < totalSteps ? (
                 <Button
-                  type="submit"
+                  type="button"
                   variant="primary"
                   rightIcon={ArrowRight}
+                  onClick={handleNextStep}
                 >
                   Next Step
                 </Button>
               ) : (
                 <Button
-                  type="submit"
+                  type="button"
                   variant="primary"
                   rightIcon={ArrowRight}
+                  onClick={handleSubmit}
                   disabled={loading}
                 >
                   {loading ? 'Creating Account & ML Strategy...' : 'Complete Registration'}
