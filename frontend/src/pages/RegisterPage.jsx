@@ -1,21 +1,45 @@
 import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { Zap, User, Mail, Lock, ArrowRight } from 'lucide-react';
+import { Zap, User, Mail, Lock, ArrowRight, AlertCircle } from 'lucide-react';
 import { Button } from '../components/common/Button';
 import { Input } from '../components/common/Input';
 import { Card } from '../components/common/Card';
+import { Alert } from '../components/common/Alert';
+import { useApp } from '../context/AppContext';
 
 export const RegisterPage = () => {
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
+  const [loading, setLoading] = useState(false);
+  const [errorMsg, setErrorMsg] = useState('');
   const navigate = useNavigate();
+  const { registerUser } = useApp();
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    // UI placeholder action
-    navigate('/onboarding');
+    setErrorMsg('');
+
+    if (password !== confirmPassword) {
+      setErrorMsg('Passwords do not match.');
+      return;
+    }
+
+    if (password.length < 6) {
+      setErrorMsg('Password must be at least 6 characters long.');
+      return;
+    }
+
+    setLoading(true);
+    const result = await registerUser(name, email, password);
+    setLoading(false);
+
+    if (result && result.success) {
+      navigate('/onboarding');
+    } else {
+      setErrorMsg(result?.error || 'Registration failed. Please try again.');
+    }
   };
 
   return (
@@ -32,6 +56,13 @@ export const RegisterPage = () => {
           <h2 className="text-xl font-bold text-slate-100">Create Student Account</h2>
           <p className="text-xs text-slate-400">Start building your adaptive fitness strategy</p>
         </div>
+
+        {/* Error Alert */}
+        {errorMsg && (
+          <Alert variant="danger" title="Registration Error" icon={AlertCircle}>
+            {errorMsg}
+          </Alert>
+        )}
 
         {/* Register Form Card */}
         <Card variant="default" className="p-6">
@@ -76,8 +107,8 @@ export const RegisterPage = () => {
               required
             />
 
-            <Button type="submit" variant="primary" fullWidth rightIcon={ArrowRight}>
-              Create Account
+            <Button type="submit" variant="primary" fullWidth rightIcon={ArrowRight} disabled={loading}>
+              {loading ? 'Creating Account...' : 'Create Account'}
             </Button>
           </form>
         </Card>

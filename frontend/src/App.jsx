@@ -1,6 +1,6 @@
 import React from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
-import { AppProvider } from './context/AppContext';
+import { AppProvider, useApp } from './context/AppContext';
 import { LandingPage } from './pages/LandingPage';
 import { LoginPage } from './pages/LoginPage';
 import { RegisterPage } from './pages/RegisterPage';
@@ -21,38 +21,72 @@ import { ProfilePage } from './pages/ProfilePage';
 import { SettingsPage } from './pages/SettingsPage';
 import { AppShell } from './components/layout/AppShell';
 
+function ProtectedRoute({ children }) {
+  const { isAuthenticated, isLoadingAuth, currentUser } = useApp();
+
+  if (isLoadingAuth) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center text-slate-400 text-xs">
+        Connecting to FITMINDS Backend...
+      </div>
+    );
+  }
+
+  if (!isAuthenticated) {
+    return <Navigate to="/login" replace />;
+  }
+
+  if (currentUser && currentUser.onboardingCompleted === false && window.location.pathname !== '/onboarding') {
+    return <Navigate to="/onboarding" replace />;
+  }
+
+  return children;
+}
+
+export function AppRoutes() {
+  return (
+    <Routes>
+      {/* Public Routes */}
+      <Route path="/" element={<LandingPage />} />
+      <Route path="/login" element={<LoginPage />} />
+      <Route path="/register" element={<RegisterPage />} />
+      <Route path="/onboarding" element={<OnboardingPage />} />
+
+      {/* App Shell Routes (Protected) */}
+      <Route
+        element={
+          <ProtectedRoute>
+            <AppShell />
+          </ProtectedRoute>
+        }
+      >
+        <Route path="/dashboard" element={<DashboardPage />} />
+        <Route path="/daily-checkin" element={<DailyCheckinPage />} />
+        <Route path="/today" element={<TodayPlanPage />} />
+        <Route path="/workout" element={<WorkoutPage />} />
+        <Route path="/live-counter" element={<LiveCounterPage />} />
+        <Route path="/session-summary" element={<SessionSummaryPage />} />
+        <Route path="/progress" element={<ProgressPage />} />
+        <Route path="/weekly-reflection" element={<WeeklyReflectionPage />} />
+        <Route path="/experiments" element={<ExperimentsPage />} />
+        <Route path="/strategy-health" element={<StrategyHealthPage />} />
+        <Route path="/decision-history" element={<DecisionHistoryPage />} />
+        <Route path="/coach" element={<CoachPage />} />
+        <Route path="/profile" element={<ProfilePage />} />
+        <Route path="/settings" element={<SettingsPage />} />
+      </Route>
+
+      {/* Fallback */}
+      <Route path="*" element={<Navigate to="/dashboard" replace />} />
+    </Routes>
+  );
+}
+
 export function App() {
   return (
     <AppProvider>
       <BrowserRouter>
-        <Routes>
-          {/* Public Routes */}
-          <Route path="/" element={<LandingPage />} />
-          <Route path="/login" element={<LoginPage />} />
-          <Route path="/register" element={<RegisterPage />} />
-          <Route path="/onboarding" element={<OnboardingPage />} />
-
-          {/* App Shell Routes */}
-          <Route element={<AppShell />}>
-            <Route path="/dashboard" element={<DashboardPage />} />
-            <Route path="/daily-checkin" element={<DailyCheckinPage />} />
-            <Route path="/today" element={<TodayPlanPage />} />
-            <Route path="/workout" element={<WorkoutPage />} />
-            <Route path="/live-counter" element={<LiveCounterPage />} />
-            <Route path="/session-summary" element={<SessionSummaryPage />} />
-            <Route path="/progress" element={<ProgressPage />} />
-            <Route path="/weekly-reflection" element={<WeeklyReflectionPage />} />
-            <Route path="/experiments" element={<ExperimentsPage />} />
-            <Route path="/strategy-health" element={<StrategyHealthPage />} />
-            <Route path="/decision-history" element={<DecisionHistoryPage />} />
-            <Route path="/coach" element={<CoachPage />} />
-            <Route path="/profile" element={<ProfilePage />} />
-            <Route path="/settings" element={<SettingsPage />} />
-          </Route>
-
-          {/* Fallback */}
-          <Route path="*" element={<Navigate to="/dashboard" replace />} />
-        </Routes>
+        <AppRoutes />
       </BrowserRouter>
     </AppProvider>
   );

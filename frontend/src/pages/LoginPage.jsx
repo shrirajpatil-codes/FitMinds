@@ -1,19 +1,42 @@
 import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { Zap, Mail, Lock, ArrowRight } from 'lucide-react';
+import { Zap, Mail, Lock, ArrowRight, AlertCircle } from 'lucide-react';
 import { Button } from '../components/common/Button';
 import { Input } from '../components/common/Input';
 import { Card } from '../components/common/Card';
+import { Alert } from '../components/common/Alert';
+import { useApp } from '../context/AppContext';
 
 export const LoginPage = () => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [loading, setLoading] = useState(false);
+  const [errorMsg, setErrorMsg] = useState('');
   const navigate = useNavigate();
+  const { loginUser } = useApp();
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    // UI placeholder action
-    navigate('/dashboard');
+    setErrorMsg('');
+    setLoading(true);
+
+    const result = await loginUser(email, password);
+    setLoading(false);
+
+    if (result && result.success) {
+      if (result.user?.onboardingCompleted === false) {
+        navigate('/onboarding');
+      } else {
+        navigate('/dashboard');
+      }
+    } else {
+      setErrorMsg(result?.error || 'Invalid email or password.');
+    }
+  };
+
+  const fillDemoUser = () => {
+    setEmail('alex@fitminds.app');
+    setPassword('Password123!');
   };
 
   return (
@@ -30,6 +53,13 @@ export const LoginPage = () => {
           <h2 className="text-xl font-bold text-slate-100">Welcome Back</h2>
           <p className="text-xs text-slate-400">Sign in to your adaptive student fitness portal</p>
         </div>
+
+        {/* Error Alert */}
+        {errorMsg && (
+          <Alert variant="danger" title="Authentication Error" icon={AlertCircle}>
+            {errorMsg}
+          </Alert>
+        )}
 
         {/* Login Form Card */}
         <Card variant="default" className="p-6">
@@ -54,10 +84,21 @@ export const LoginPage = () => {
               required
             />
 
-            <Button type="submit" variant="primary" fullWidth rightIcon={ArrowRight}>
-              Sign In
+            <Button type="submit" variant="primary" fullWidth rightIcon={ArrowRight} disabled={loading}>
+              {loading ? 'Authenticating...' : 'Sign In'}
             </Button>
           </form>
+
+          <div className="mt-4 pt-4 border-t border-slate-800 flex justify-between items-center text-xs">
+            <span className="text-slate-400">Testing development?</span>
+            <button
+              type="button"
+              onClick={fillDemoUser}
+              className="text-brand font-medium hover:underline hover:text-brand-light"
+            >
+              Fill Demo Credentials
+            </button>
+          </div>
         </Card>
 
         <div className="text-center text-xs text-slate-400">

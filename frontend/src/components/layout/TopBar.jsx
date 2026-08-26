@@ -1,9 +1,21 @@
 import React from 'react';
-import { Bell, Search, Sparkles } from 'lucide-react';
+import { Bell, Search, Sparkles, LogOut } from 'lucide-react';
 import { Avatar } from '../common/Avatar';
 import { Badge } from '../common/Badge';
+import { useApp } from '../../context/AppContext';
+import { useNavigate } from 'react-router-dom';
 
 export const TopBar = ({ title = 'Dashboard' }) => {
+  const { currentUser, userProfile, logoutUser } = useApp();
+  const navigate = useNavigate();
+
+  const handleLogout = () => {
+    logoutUser();
+    navigate('/login');
+  };
+
+  const displayName = currentUser?.name || userProfile?.name || 'Alex Rivers';
+
   return (
     <header className="h-16 bg-slate-900/80 backdrop-blur-md border-b border-slate-800 px-6 flex items-center justify-between sticky top-0 z-20">
       {/* Title & Status */}
@@ -35,12 +47,20 @@ export const TopBar = ({ title = 'Dashboard' }) => {
 
         <div className="h-6 w-px bg-slate-800 mx-1" />
 
-        <div className="flex items-center gap-2 cursor-pointer p-1 rounded-xl hover:bg-slate-800/50 transition-colors">
-          <Avatar name="Alex Student" size="sm" />
+        <div className="flex items-center gap-2.5 p-1 rounded-xl">
+          <Avatar name={displayName} size="sm" />
           <div className="hidden lg:flex flex-col text-left">
-            <span className="text-xs font-medium text-slate-200">Alex Chen</span>
-            <span className="text-[10px] text-slate-400">CS Undergrad</span>
+            <span className="text-xs font-medium text-slate-200">{displayName}</span>
+            <span className="text-[10px] text-brand">{currentUser?.email || 'alex@fitminds.app'}</span>
           </div>
+
+          <button
+            onClick={handleLogout}
+            title="Log out"
+            className="p-1.5 ml-1 text-slate-400 hover:text-rose-400 hover:bg-slate-800 rounded-lg transition-colors"
+          >
+            <LogOut className="w-4 h-4" />
+          </button>
         </div>
       </div>
     </header>

@@ -9,38 +9,48 @@ import { useApp } from '../context/AppContext';
 
 export const OnboardingPage = () => {
   const navigate = useNavigate();
-  const { userProfile, setUserProfile } = useApp();
+  const { userProfile, saveOnboardingProfile } = useApp();
   const [step, setStep] = useState(1);
   const [isGenerating, setIsGenerating] = useState(false);
 
   const [formData, setFormData] = useState({
     name: userProfile.name || 'Alex Chen',
     age: userProfile.age || 21,
-    fitnessExperience: 'Intermediate',
-    goal: 'Improve consistency',
-    availableTime: '20 min',
-    preferredWindow: 'Evening',
-    equipment: 'Basic equipment',
-    lifestyleLoad: 'Moderate',
+    fitnessExperience: 'INTERMEDIATE',
+    goal: 'CONSISTENCY',
+    availableTime: '20',
+    preferredWindow: 'EVENING',
+    equipment: 'BASIC',
+    lifestyleLoad: 'MODERATE',
   });
 
   const totalSteps = 6;
 
-  const handleNext = () => {
+  const handleNext = async () => {
     if (step < totalSteps) {
       setStep(prev => prev + 1);
     } else {
       // Final Step Submission
       setIsGenerating(true);
+
+      const timeNum = parseInt(formData.availableTime, 10) || 20;
+
+      await saveOnboardingProfile({
+        name: formData.name,
+        age: parseInt(formData.age, 10) || 21,
+        fitnessExperience: formData.fitnessExperience,
+        fitnessGoal: formData.goal,
+        availableWorkoutTime: timeNum,
+        preferredWorkoutWindow: formData.preferredWindow,
+        equipment: formData.equipment,
+        lifestyleLoad: formData.lifestyleLoad,
+        onboardingCompleted: true,
+      });
+
       setTimeout(() => {
-        setUserProfile(prev => ({
-          ...prev,
-          ...formData,
-          onboardingCompleted: true,
-        }));
         setIsGenerating(false);
         navigate('/dashboard');
-      }, 1800);
+      }, 1200);
     }
   };
 
@@ -54,12 +64,12 @@ export const OnboardingPage = () => {
         <div className="w-16 h-16 rounded-2xl bg-purple-950/80 border border-purple-800 flex items-center justify-center text-purple-400 mb-6 shadow-ai-glow animate-pulse">
           <Brain className="w-8 h-8" />
         </div>
-        <h2 className="text-2xl font-extrabold text-slate-100 mb-2">Building Your FITMINDS Plan...</h2>
+        <h2 className="text-2xl font-extrabold text-slate-100 mb-2">Saving Strategy to PostgreSQL...</h2>
         <p className="text-sm text-slate-400 max-w-sm mb-6">
-          Calibrating exercise duration, recovery buffers, and schedule friction parameters.
+          Calibrating exercise duration, recovery buffers, and schedule friction parameters in your database.
         </p>
         <div className="w-64">
-          <ProgressBar value={85} variant="ai" showValue />
+          <ProgressBar value={90} variant="ai" showValue />
         </div>
       </div>
     );
@@ -100,18 +110,22 @@ export const OnboardingPage = () => {
               <div className="space-y-1.5">
                 <label className="text-xs font-medium text-slate-300">Fitness Experience</label>
                 <div className="grid grid-cols-3 gap-2">
-                  {['Beginner', 'Intermediate', 'Advanced'].map(exp => (
+                  {[
+                    { label: 'Beginner', val: 'BEGINNER' },
+                    { label: 'Intermediate', val: 'INTERMEDIATE' },
+                    { label: 'Advanced', val: 'ADVANCED' },
+                  ].map(exp => (
                     <button
-                      key={exp}
+                      key={exp.val}
                       type="button"
-                      onClick={() => setFormData({ ...formData, fitnessExperience: exp })}
+                      onClick={() => setFormData({ ...formData, fitnessExperience: exp.val })}
                       className={`p-3 rounded-xl text-xs font-medium border transition-all ${
-                        formData.fitnessExperience === exp
+                        formData.fitnessExperience === exp.val
                           ? 'border-brand bg-cyan-950/40 text-brand'
                           : 'border-slate-800 bg-slate-900 text-slate-400 hover:border-slate-700'
                       }`}
                     >
-                      {exp}
+                      {exp.label}
                     </button>
                   ))}
                 </div>
@@ -124,23 +138,23 @@ export const OnboardingPage = () => {
               <h3 className="text-base font-semibold text-slate-100">Step 2: Primary Fitness Goal</h3>
               <div className="space-y-2">
                 {[
-                  'Build strength around classes',
-                  'Improve workout consistency',
-                  'Stay active & relieve study stress',
-                  'General fitness & mobility'
+                  { label: 'Build strength around classes', val: 'STRENGTH' },
+                  { label: 'Improve workout consistency', val: 'CONSISTENCY' },
+                  { label: 'Stay active & relieve stress', val: 'ACTIVE' },
+                  { label: 'General fitness & mobility', val: 'FITNESS' },
                 ].map(g => (
                   <button
-                    key={g}
+                    key={g.val}
                     type="button"
-                    onClick={() => setFormData({ ...formData, goal: g })}
+                    onClick={() => setFormData({ ...formData, goal: g.val })}
                     className={`w-full p-3.5 rounded-xl text-xs font-medium border text-left flex items-center justify-between transition-all ${
-                      formData.goal === g
+                      formData.goal === g.val
                         ? 'border-brand bg-cyan-950/40 text-brand'
                         : 'border-slate-800 bg-slate-900 text-slate-300 hover:border-slate-700'
                     }`}
                   >
-                    <span>{g}</span>
-                    {formData.goal === g && <CheckCircle2 className="w-4 h-4 text-brand" />}
+                    <span>{g.label}</span>
+                    {formData.goal === g.val && <CheckCircle2 className="w-4 h-4 text-brand" />}
                   </button>
                 ))}
               </div>
@@ -152,18 +166,24 @@ export const OnboardingPage = () => {
               <h3 className="text-base font-semibold text-slate-100">Step 3: Available Workout Time</h3>
               <p className="text-xs text-slate-400">How much time can you realistically give to a workout on busy days?</p>
               <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
-                {['10 min', '15 min', '20 min', '30 min', '45+ min'].map(t => (
+                {[
+                  { label: '10 min', val: '10' },
+                  { label: '15 min', val: '15' },
+                  { label: '20 min', val: '20' },
+                  { label: '30 min', val: '30' },
+                  { label: '45+ min', val: '45' },
+                ].map(t => (
                   <button
-                    key={t}
+                    key={t.val}
                     type="button"
-                    onClick={() => setFormData({ ...formData, availableTime: t })}
+                    onClick={() => setFormData({ ...formData, availableTime: t.val })}
                     className={`p-4 rounded-xl text-xs font-semibold border text-center transition-all ${
-                      formData.availableTime === t
+                      formData.availableTime === t.val
                         ? 'border-brand bg-cyan-950/40 text-brand shadow-brand-glow'
                         : 'border-slate-800 bg-slate-900 text-slate-300 hover:border-slate-700'
                     }`}
                   >
-                    {t}
+                    {t.label}
                   </button>
                 ))}
               </div>
@@ -174,18 +194,23 @@ export const OnboardingPage = () => {
             <div className="space-y-4 animate-in fade-in duration-200">
               <h3 className="text-base font-semibold text-slate-100">Step 4: Preferred Workout Window</h3>
               <div className="grid grid-cols-2 gap-3">
-                {['Morning', 'Afternoon', 'Evening', 'Flexible'].map(w => (
+                {[
+                  { label: 'Morning', val: 'MORNING' },
+                  { label: 'Afternoon', val: 'AFTERNOON' },
+                  { label: 'Evening', val: 'EVENING' },
+                  { label: 'Flexible', val: 'FLEXIBLE' },
+                ].map(w => (
                   <button
-                    key={w}
+                    key={w.val}
                     type="button"
-                    onClick={() => setFormData({ ...formData, preferredWindow: w })}
+                    onClick={() => setFormData({ ...formData, preferredWindow: w.val })}
                     className={`p-4 rounded-xl text-xs font-semibold border text-center transition-all ${
-                      formData.preferredWindow === w
+                      formData.preferredWindow === w.val
                         ? 'border-brand bg-cyan-950/40 text-brand'
                         : 'border-slate-800 bg-slate-900 text-slate-300 hover:border-slate-700'
                     }`}
                   >
-                    {w}
+                    {w.label}
                   </button>
                 ))}
               </div>
@@ -197,22 +222,22 @@ export const OnboardingPage = () => {
               <h3 className="text-base font-semibold text-slate-100">Step 5: Available Equipment</h3>
               <div className="space-y-2">
                 {[
-                  'No equipment (Bodyweight only)',
-                  'Basic equipment (Dumbbells, resistance bands)',
-                  'Full gym access'
+                  { label: 'No equipment (Bodyweight only)', val: 'NONE' },
+                  { label: 'Basic equipment (Dumbbells, resistance bands)', val: 'BASIC' },
+                  { label: 'Full gym access', val: 'GYM' },
                 ].map(eq => (
                   <button
-                    key={eq}
+                    key={eq.val}
                     type="button"
-                    onClick={() => setFormData({ ...formData, equipment: eq })}
+                    onClick={() => setFormData({ ...formData, equipment: eq.val })}
                     className={`w-full p-3.5 rounded-xl text-xs font-medium border text-left flex items-center justify-between transition-all ${
-                      formData.equipment === eq
+                      formData.equipment === eq.val
                         ? 'border-brand bg-cyan-950/40 text-brand'
                         : 'border-slate-800 bg-slate-900 text-slate-300 hover:border-slate-700'
                     }`}
                   >
-                    <span>{eq}</span>
-                    {formData.equipment === eq && <CheckCircle2 className="w-4 h-4 text-brand" />}
+                    <span>{eq.label}</span>
+                    {formData.equipment === eq.val && <CheckCircle2 className="w-4 h-4 text-brand" />}
                   </button>
                 ))}
               </div>
@@ -225,16 +250,16 @@ export const OnboardingPage = () => {
               <p className="text-xs text-slate-400">How demanding is your typical academic day?</p>
               <div className="grid grid-cols-3 gap-3">
                 {[
-                  { level: 'Low', desc: 'Light classes' },
-                  { level: 'Moderate', desc: 'Regular lectures' },
-                  { level: 'High', desc: 'Exams & labs' }
+                  { level: 'Low', val: 'LOW', desc: 'Light classes' },
+                  { level: 'Moderate', val: 'MODERATE', desc: 'Regular lectures' },
+                  { level: 'High', val: 'HIGH', desc: 'Exams & labs' }
                 ].map(item => (
                   <button
-                    key={item.level}
+                    key={item.val}
                     type="button"
-                    onClick={() => setFormData({ ...formData, lifestyleLoad: item.level })}
+                    onClick={() => setFormData({ ...formData, lifestyleLoad: item.val })}
                     className={`p-4 rounded-xl text-xs font-semibold border text-center transition-all ${
-                      formData.lifestyleLoad === item.level
+                      formData.lifestyleLoad === item.val
                         ? 'border-brand bg-cyan-950/40 text-brand'
                         : 'border-slate-800 bg-slate-900 text-slate-300 hover:border-slate-700'
                     }`}
@@ -265,7 +290,7 @@ export const OnboardingPage = () => {
               onClick={handleNext}
               rightIcon={step === totalSteps ? Sparkles : ArrowRight}
             >
-              {step === totalSteps ? 'Build My FITMINDS Plan' : 'Continue'}
+              {step === totalSteps ? 'Save to PostgreSQL Plan' : 'Continue'}
             </Button>
           </div>
         </Card>
