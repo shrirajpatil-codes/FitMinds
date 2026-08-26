@@ -6,7 +6,7 @@ const { calculateBMI, getBMICategory } = require('../utils/bmi');
 
 async function register(req, res, next) {
   try {
-    const { name, email, password, heightCm, weightKg, targetWeightKg, fitnessGoal, age } = req.body;
+    const { name, email, password, heightCm, weightKg, targetWeightKg, fitnessGoal, fitnessExperience, equipment, availableWorkoutTime, age } = req.body;
 
     if (!name || !email || !password) {
       return errorResponse(res, 'Please provide name, email, and password.', 400);
@@ -48,6 +48,9 @@ async function register(req, res, next) {
             bmi: bmi,
             bmiCategory: bmiCategory,
             fitnessGoal: fitnessGoal || 'FITNESS',
+            fitnessExperience: fitnessExperience || 'BEGINNER',
+            equipment: equipment || 'NONE',
+            availableWorkoutTime: availableWorkoutTime ? parseInt(availableWorkoutTime, 10) : 20,
             onboardingCompleted: !!(parsedHeight && parsedWeight),
           },
         },
