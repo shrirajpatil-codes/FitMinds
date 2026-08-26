@@ -327,8 +327,9 @@ export const AppProvider = ({ children }) => {
       }));
     }
 
-    // Refresh ML Recommendation with new check-in state
+    // Refresh ML Recommendation & Activity Heatmap
     fetchMlRecommendation();
+    window.dispatchEvent(new Event('fitminds_activity_updated'));
   };
 
   // Method to adjust plan manually
@@ -364,6 +365,7 @@ export const AppProvider = ({ children }) => {
       const res = await api.sessions.start(targetId);
       if (res.success && res.data) {
         setActiveSessionId(res.data.id);
+        window.dispatchEvent(new Event('fitminds_activity_updated'));
       }
     } catch (e) {
       console.warn('Session start API error:', e.message);
@@ -376,6 +378,7 @@ export const AppProvider = ({ children }) => {
     try {
       await api.reflections.create(refData);
       setReflections(prev => [refData, ...prev]);
+      window.dispatchEvent(new Event('fitminds_activity_updated'));
     } catch (e) {
       console.warn('Reflection API error:', e.message);
     }
@@ -387,6 +390,7 @@ export const AppProvider = ({ children }) => {
       const res = await api.experiments.create(expData);
       if (res.success) {
         setExperiments(prev => [res.data, ...prev]);
+        window.dispatchEvent(new Event('fitminds_activity_updated'));
       }
     } catch (e) {
       console.warn('Experiment API error:', e.message);
@@ -438,9 +442,12 @@ export const AppProvider = ({ children }) => {
     setProgress(prev => ({
       ...prev,
       currentStreakDays: prev.currentStreakDays + 1,
+      workoutsCompleted: prev.workoutsCompleted + 1,
       totalSessionsCompleted: prev.totalSessionsCompleted + 1,
       weeklyCompletedSessions: Math.min(prev.weeklyTargetSessions, prev.weeklyCompletedSessions + 1)
     }));
+
+    window.dispatchEvent(new Event('fitminds_activity_updated'));
 
     resetWorkoutState();
     fetchMlRecommendation();
