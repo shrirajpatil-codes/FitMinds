@@ -1,36 +1,42 @@
 import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { Zap, User, Mail, Lock, ArrowRight, AlertCircle, Scale, Ruler, Target, Activity, Dumbbell, Award } from 'lucide-react';
+import { Zap, User, Mail, Lock, ArrowRight, ArrowLeft, AlertCircle, Scale, Ruler, Target, Activity, Dumbbell, Award, CheckCircle2 } from 'lucide-react';
 import { Button } from '../components/common/Button';
 import { Input } from '../components/common/Input';
 import { Card } from '../components/common/Card';
 import { Alert } from '../components/common/Alert';
+import { ProgressBar } from '../components/common/ProgressBar';
 import { useApp } from '../context/AppContext';
 
 export const RegisterPage = () => {
+  const [step, setStep] = useState(1);
+
+  // Step 1: Credentials
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
-  
-  // Fitness Experience & Equipment
+
+  // Step 2: Experience & Equipment
   const [fitnessExperience, setFitnessExperience] = useState('BEGINNER');
   const [equipment, setEquipment] = useState('NONE');
-  
-  // Body Metrics
+
+  // Step 3: Body Metrics
   const [heightCm, setHeightCm] = useState('175');
   const [weightKg, setWeightKg] = useState('70');
-  
-  // Primary Goal
+
+  // Step 4: Primary Goal
   const [fitnessGoal, setFitnessGoal] = useState('WEIGHT_LOSS');
-  
+
   const [loading, setLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState('');
 
   const navigate = useNavigate();
   const { registerUser } = useApp();
 
-  // Compute live BMI & Category preview
+  const totalSteps = 4;
+
+  // Live BMI calculation
   const hM = parseFloat(heightCm) / 100.0;
   const wKg = parseFloat(weightKg);
   const liveBmi = (hM > 0 && wKg > 0) ? (wKg / (hM * hM)).toFixed(1) : null;
@@ -54,24 +60,55 @@ export const RegisterPage = () => {
     }
   }
 
+  const handleNextStep = (e) => {
+    e?.preventDefault();
+    setErrorMsg('');
+
+    if (step === 1) {
+      if (!name.trim()) {
+        setErrorMsg('Please enter your full name.');
+        return;
+      }
+      if (!email.trim() || !email.includes('@')) {
+        setErrorMsg('Please enter a valid student email address.');
+        return;
+      }
+      if (password.length < 6) {
+        setErrorMsg('Password must be at least 6 characters long.');
+        return;
+      }
+      if (password !== confirmPassword) {
+        setErrorMsg('Passwords do not match.');
+        return;
+      }
+    }
+
+    if (step === 3) {
+      if (!heightCm || parseFloat(heightCm) <= 0) {
+        setErrorMsg('Please enter a valid height in cm.');
+        return;
+      }
+      if (!weightKg || parseFloat(weightKg) <= 0) {
+        setErrorMsg('Please enter a valid weight in kg.');
+        return;
+      }
+    }
+
+    if (step < totalSteps) {
+      setStep((prev) => prev + 1);
+    }
+  };
+
+  const handlePrevStep = () => {
+    setErrorMsg('');
+    if (step > 1) {
+      setStep((prev) => prev - 1);
+    }
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     setErrorMsg('');
-
-    if (password !== confirmPassword) {
-      setErrorMsg('Passwords do not match.');
-      return;
-    }
-
-    if (password.length < 6) {
-      setErrorMsg('Password must be at least 6 characters long.');
-      return;
-    }
-
-    if (!heightCm || !weightKg) {
-      setErrorMsg('Please enter your height and weight.');
-      return;
-    }
 
     setLoading(true);
     const result = await registerUser(name, email, password, {
@@ -91,187 +128,292 @@ export const RegisterPage = () => {
   };
 
   return (
-    <div className="min-h-screen bg-background text-slate-100 flex flex-col justify-center items-center p-4 sm:p-6 my-8">
-      <div className="w-full max-w-xl space-y-6">
+    <div className="min-h-screen bg-background text-slate-100 flex flex-col justify-center items-center p-4 sm:p-6 my-6">
+      <div className="w-full max-w-lg space-y-6">
         {/* Brand Header */}
         <div className="text-center space-y-2">
-          <Link to="/" className="inline-flex items-center gap-2 mb-2">
+          <Link to="/" className="inline-flex items-center gap-2 mb-1">
             <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-brand-blue to-brand flex items-center justify-center text-slate-950 font-bold shadow-brand-glow">
               <Zap className="w-6 h-6 fill-slate-950 stroke-none" />
             </div>
             <span className="font-extrabold text-2xl tracking-wider text-slate-100">FITMINDS</span>
           </Link>
-          <h2 className="text-xl font-bold text-slate-100">Student Account Registration</h2>
-          <p className="text-xs text-slate-400">Fill in your profile details & fitness goals to personalize your ML workout strategy</p>
+          <h2 className="text-xl font-bold text-slate-100">Student Registration Wizard</h2>
+          <p className="text-xs text-slate-400">Step {step} of {totalSteps} — Fill your details step by step</p>
+          
+          <div className="pt-2">
+            <ProgressBar value={(step / totalSteps) * 100} variant="brand" size="sm" />
+          </div>
         </div>
 
         {/* Error Alert */}
         {errorMsg && (
-          <Alert variant="danger" title="Registration Error" icon={AlertCircle}>
+          <Alert variant="danger" title="Validation Error" icon={AlertCircle}>
             {errorMsg}
           </Alert>
         )}
 
         {/* Register Form Card */}
-        <Card variant="default" className="p-6">
-          <form onSubmit={handleSubmit} className="space-y-4">
-            {/* Account Credentials */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <Input
-                label="Full Name"
-                type="text"
-                placeholder="Ayush Mane"
-                leftIcon={User}
-                value={name}
-                onChange={(e) => setName(e.target.value)}
-                required
-              />
-
-              <Input
-                label="Student Email"
-                type="email"
-                placeholder="user@fitminds.edu"
-                leftIcon={Mail}
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                required
-              />
-            </div>
-
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <Input
-                label="Password"
-                type="password"
-                placeholder="••••••••"
-                leftIcon={Lock}
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                required
-              />
-
-              <Input
-                label="Confirm Password"
-                type="password"
-                placeholder="••••••••"
-                leftIcon={Lock}
-                value={confirmPassword}
-                onChange={(e) => setConfirmPassword(e.target.value)}
-                required
-              />
-            </div>
-
-            {/* Fitness Level & Equipment */}
-            <div className="pt-2 border-t border-slate-800">
-              <span className="text-xs font-bold text-indigo-400 uppercase tracking-wider block mb-3">
-                Fitness Experience & Equipment Access
-              </span>
-
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-xs font-medium text-slate-300 mb-1 flex items-center gap-1.5">
-                    <Award className="w-3.5 h-3.5 text-brand" />
-                    Fitness Level
-                  </label>
-                  <select
-                    value={fitnessExperience}
-                    onChange={(e) => setFitnessExperience(e.target.value)}
-                    className="w-full px-3 py-2 bg-slate-900 border border-slate-700 rounded-xl text-slate-200 text-sm focus:outline-none focus:border-brand"
-                  >
-                    <option value="BEGINNER">🌱 Beginner (Just Starting)</option>
-                    <option value="INTERMEDIATE">⚡ Intermediate (Regular Workouts)</option>
-                    <option value="ADVANCED">🔥 Advanced (Experienced Athlete)</option>
-                  </select>
+        <Card variant="default" className="p-6 md:p-8 min-h-[380px] flex flex-col justify-between">
+          <form onSubmit={step === totalSteps ? handleSubmit : handleNextStep} className="space-y-6 flex-1 flex flex-col justify-between">
+            
+            {/* STEP 1: Account Credentials */}
+            {step === 1 && (
+              <div className="space-y-4 animate-in fade-in duration-200">
+                <div className="pb-2 border-b border-slate-800">
+                  <h3 className="text-base font-bold text-slate-100 flex items-center gap-2">
+                    <User className="w-4 h-4 text-brand" />
+                    Step 1: Student Account Info
+                  </h3>
+                  <p className="text-xs text-slate-400">Enter your name and login credentials</p>
                 </div>
 
-                <div>
-                  <label className="block text-xs font-medium text-slate-300 mb-1 flex items-center gap-1.5">
-                    <Dumbbell className="w-3.5 h-3.5 text-brand" />
-                    Equipment Access
-                  </label>
-                  <select
-                    value={equipment}
-                    onChange={(e) => setEquipment(e.target.value)}
-                    className="w-full px-3 py-2 bg-slate-900 border border-slate-700 rounded-xl text-slate-200 text-sm focus:outline-none focus:border-brand"
-                  >
-                    <option value="NONE">🧘 None (Bodyweight Only)</option>
-                    <option value="BASIC">🏋️ Basic (Dumbbells / Bands)</option>
-                    <option value="GYM">🏢 Full Gym Access</option>
-                  </select>
-                </div>
-              </div>
-            </div>
-
-            {/* Body Metrics Row */}
-            <div className="pt-2 border-t border-slate-800">
-              <span className="text-xs font-bold text-indigo-400 uppercase tracking-wider block mb-3">
-                Body Metrics & Fitness Goal
-              </span>
-
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-3">
                 <Input
-                  label="Height (cm)"
-                  type="number"
-                  placeholder="175"
-                  leftIcon={Ruler}
-                  value={heightCm}
-                  onChange={(e) => setHeightCm(e.target.value)}
+                  label="Full Name"
+                  type="text"
+                  placeholder="Ayush Mane"
+                  leftIcon={User}
+                  value={name}
+                  onChange={(e) => setName(e.target.value)}
                   required
                 />
 
                 <Input
-                  label="Weight (kg)"
-                  type="number"
-                  placeholder="70"
-                  leftIcon={Scale}
-                  value={weightKg}
-                  onChange={(e) => setWeightKg(e.target.value)}
+                  label="Student Email"
+                  type="email"
+                  placeholder="user@fitminds.edu"
+                  leftIcon={Mail}
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
                   required
                 />
-              </div>
 
-              {/* Primary Fitness Goal */}
-              <div className="mb-3">
-                <label className="block text-xs font-medium text-slate-300 mb-1 flex items-center gap-1.5">
-                  <Target className="w-3.5 h-3.5 text-brand" />
-                  Primary Fitness Goal
-                </label>
-                <select
-                  value={fitnessGoal}
-                  onChange={(e) => setFitnessGoal(e.target.value)}
-                  className="w-full px-3 py-2 bg-slate-900 border border-slate-700 rounded-xl text-slate-200 text-sm focus:outline-none focus:border-brand"
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <Input
+                    label="Password"
+                    type="password"
+                    placeholder="••••••••"
+                    leftIcon={Lock}
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    required
+                  />
+
+                  <Input
+                    label="Confirm Password"
+                    type="password"
+                    placeholder="••••••••"
+                    leftIcon={Lock}
+                    value={confirmPassword}
+                    onChange={(e) => setConfirmPassword(e.target.value)}
+                    required
+                  />
+                </div>
+              </div>
+            )}
+
+            {/* STEP 2: Fitness Level & Equipment */}
+            {step === 2 && (
+              <div className="space-y-4 animate-in fade-in duration-200">
+                <div className="pb-2 border-b border-slate-800">
+                  <h3 className="text-base font-bold text-slate-100 flex items-center gap-2">
+                    <Award className="w-4 h-4 text-brand" />
+                    Step 2: Experience & Gym Equipment
+                  </h3>
+                  <p className="text-xs text-slate-400">Select your workout experience and available gear</p>
+                </div>
+
+                <div className="space-y-2">
+                  <label className="text-xs font-semibold text-slate-300 block">Fitness Level</label>
+                  <div className="grid grid-cols-3 gap-2">
+                    {[
+                      { label: 'Beginner', val: 'BEGINNER', desc: 'Just Starting' },
+                      { label: 'Intermediate', val: 'INTERMEDIATE', desc: 'Regular Workouts' },
+                      { label: 'Advanced', val: 'ADVANCED', desc: 'Athlete' },
+                    ].map((item) => (
+                      <button
+                        key={item.val}
+                        type="button"
+                        onClick={() => setFitnessExperience(item.val)}
+                        className={`p-3 rounded-xl text-xs font-medium border text-center transition-all flex flex-col items-center justify-center gap-1 ${
+                          fitnessExperience === item.val
+                            ? 'border-brand bg-cyan-950/40 text-brand shadow-brand-glow'
+                            : 'border-slate-800 bg-slate-900 text-slate-400 hover:border-slate-700'
+                        }`}
+                      >
+                        <span className="font-bold">{item.label}</span>
+                        <span className="text-[10px] text-slate-500">{item.desc}</span>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                <div className="space-y-2 pt-2">
+                  <label className="text-xs font-semibold text-slate-300 block">Equipment Access</label>
+                  <div className="space-y-2">
+                    {[
+                      { label: '🧘 No Equipment (Bodyweight only)', val: 'NONE', desc: 'Zero gear needed' },
+                      { label: '🏋️ Basic Equipment (Dumbbells / Bands)', val: 'BASIC', desc: 'Home dumbbell set' },
+                      { label: '🏢 Full Gym Access (Gym machines & barbells)', val: 'GYM', desc: 'Commercial gym membership' },
+                    ].map((eq) => (
+                      <button
+                        key={eq.val}
+                        type="button"
+                        onClick={() => setEquipment(eq.val)}
+                        className={`w-full p-3.5 rounded-xl text-xs font-medium border text-left flex items-center justify-between transition-all ${
+                          equipment === eq.val
+                            ? 'border-brand bg-cyan-950/40 text-brand'
+                            : 'border-slate-800 bg-slate-900 text-slate-300 hover:border-slate-700'
+                        }`}
+                      >
+                        <div>
+                          <span className="font-semibold block">{eq.label}</span>
+                          <span className="text-[10px] text-slate-500 block">{eq.desc}</span>
+                        </div>
+                        {equipment === eq.val && <CheckCircle2 className="w-4 h-4 text-brand shrink-0" />}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* STEP 3: Body Metrics & Live BMI */}
+            {step === 3 && (
+              <div className="space-y-4 animate-in fade-in duration-200">
+                <div className="pb-2 border-b border-slate-800">
+                  <h3 className="text-base font-bold text-slate-100 flex items-center gap-2">
+                    <Scale className="w-4 h-4 text-brand" />
+                    Step 3: Body Metrics & BMI Calculator
+                  </h3>
+                  <p className="text-xs text-slate-400">Enter your height and weight for ML body composition modeling</p>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <Input
+                    label="Height (cm)"
+                    type="number"
+                    placeholder="175"
+                    leftIcon={Ruler}
+                    value={heightCm}
+                    onChange={(e) => setHeightCm(e.target.value)}
+                    required
+                  />
+
+                  <Input
+                    label="Weight (kg)"
+                    type="number"
+                    placeholder="70"
+                    leftIcon={Scale}
+                    value={weightKg}
+                    onChange={(e) => setWeightKg(e.target.value)}
+                    required
+                  />
+                </div>
+
+                {/* Live BMI Preview Card */}
+                {liveBmi && (
+                  <div className="p-4 rounded-xl bg-slate-900 border border-slate-800 space-y-3 mt-4">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2.5">
+                        <div className="p-2 rounded-lg bg-indigo-500/10 text-indigo-400">
+                          <Activity className="w-5 h-5" />
+                        </div>
+                        <div>
+                          <span className="text-xs text-slate-400 block">Calculated BMI Score</span>
+                          <span className="text-base font-extrabold text-slate-100">{liveBmi} kg/m²</span>
+                        </div>
+                      </div>
+
+                      <div className={`px-3 py-1 rounded-lg text-xs font-bold border ${catColor}`}>
+                        {bmiCat}
+                      </div>
+                    </div>
+
+                    <p className="text-[11px] text-slate-400">
+                      FITMINDS ML Engine uses your BMI category to calibrate calorie targets and exercise intensities.
+                    </p>
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* STEP 4: Primary Fitness Goal */}
+            {step === 4 && (
+              <div className="space-y-4 animate-in fade-in duration-200">
+                <div className="pb-2 border-b border-slate-800">
+                  <h3 className="text-base font-bold text-slate-100 flex items-center gap-2">
+                    <Target className="w-4 h-4 text-brand" />
+                    Step 4: Primary Fitness Goal
+                  </h3>
+                  <p className="text-xs text-slate-400">Select what you want to achieve with FITMINDS</p>
+                </div>
+
+                <div className="space-y-2">
+                  {[
+                    { label: '🔥 Weight Loss (Fat Loss & Lean Toning)', val: 'WEIGHT_LOSS', desc: 'Caloric deficit workouts & fat burn' },
+                    { label: '💪 Weight Gain (Muscle Mass & Hypertrophy)', val: 'WEIGHT_GAIN', desc: 'Progressive strength & muscle building' },
+                    { label: '🏋️ Build Strength & Athletic Power', val: 'STRENGTH', desc: 'Heavy resistance & power exercises' },
+                    { label: '⚡ General Fitness & Daily Energy', val: 'FITNESS', desc: 'Balanced cardio & endurance' },
+                    { label: '🎯 Workout Consistency & Streak', val: 'CONSISTENCY', desc: 'Short low-friction routine builder' },
+                    { label: '🧘 Stay Active & Stress Relief', val: 'ACTIVE', desc: 'Mobility, posture & exam decompression' },
+                  ].map((g) => (
+                    <button
+                      key={g.val}
+                      type="button"
+                      onClick={() => setFitnessGoal(g.val)}
+                      className={`w-full p-3 rounded-xl text-xs font-medium border text-left flex items-center justify-between transition-all ${
+                        fitnessGoal === g.val
+                          ? 'border-brand bg-cyan-950/40 text-brand shadow-brand-glow'
+                          : 'border-slate-800 bg-slate-900 text-slate-300 hover:border-slate-700'
+                      }`}
+                    >
+                      <div>
+                        <span className="font-bold block">{g.label}</span>
+                        <span className="text-[10px] text-slate-500 block">{g.desc}</span>
+                      </div>
+                      {fitnessGoal === g.val && <CheckCircle2 className="w-4 h-4 text-brand shrink-0" />}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Navigation Controls */}
+            <div className="flex items-center justify-between gap-3 pt-6 border-t border-slate-800 mt-4">
+              {step > 1 ? (
+                <Button
+                  type="button"
+                  variant="secondary"
+                  leftIcon={ArrowLeft}
+                  onClick={handlePrevStep}
+                  disabled={loading}
                 >
-                  <option value="WEIGHT_LOSS">🔥 Weight Loss (Fat Loss & Toning)</option>
-                  <option value="WEIGHT_GAIN">💪 Weight Gain (Muscle Mass Building)</option>
-                  <option value="STRENGTH">🏋️ Build Strength & Hypertrophy</option>
-                  <option value="FITNESS">⚡ General Fitness & Stamina</option>
-                  <option value="CONSISTENCY">🎯 Habit & Workout Consistency</option>
-                  <option value="ACTIVE">🧘 Stay Active & Stress Relief</option>
-                </select>
-              </div>
+                  Back
+                </Button>
+              ) : (
+                <div />
+              )}
 
-              {/* Live BMI Preview Card */}
-              {liveBmi && (
-                <div className="p-3.5 rounded-xl bg-slate-900/90 border border-slate-800 flex items-center justify-between">
-                  <div className="flex items-center gap-2.5">
-                    <div className="p-2 rounded-lg bg-indigo-500/10 text-indigo-400">
-                      <Activity className="w-4 h-4" />
-                    </div>
-                    <div>
-                      <span className="text-[11px] text-slate-400 block">Calculated Baseline BMI</span>
-                      <span className="text-sm font-extrabold text-slate-100">{liveBmi} kg/m²</span>
-                    </div>
-                  </div>
-
-                  <div className={`px-2.5 py-1 rounded-lg text-xs font-bold border ${catColor}`}>
-                    {bmiCat}
-                  </div>
-                </div>
+              {step < totalSteps ? (
+                <Button
+                  type="submit"
+                  variant="primary"
+                  rightIcon={ArrowRight}
+                >
+                  Next Step
+                </Button>
+              ) : (
+                <Button
+                  type="submit"
+                  variant="primary"
+                  rightIcon={ArrowRight}
+                  disabled={loading}
+                >
+                  {loading ? 'Creating Account & ML Strategy...' : 'Complete Registration'}
+                </Button>
               )}
             </div>
-
-            <Button type="submit" variant="primary" fullWidth rightIcon={ArrowRight} disabled={loading}>
-              {loading ? 'Creating Account & Training Profile...' : 'Complete Registration'}
-            </Button>
           </form>
         </Card>
 
