@@ -24,6 +24,7 @@ import { Badge } from '../components/common/Badge';
 import { StatCard } from '../components/common/StatCard';
 import { Alert } from '../components/common/Alert';
 import { PlanAdjustmentModal } from '../components/common/PlanAdjustmentModal';
+import { ActivityHeatmap } from '../components/profile/ActivityHeatmap';
 import { useApp } from '../context/AppContext';
 
 export const DashboardPage = () => {
@@ -278,6 +279,9 @@ export const DashboardPage = () => {
               {dailyContext.contextSummary}
             </Alert>
           </Card>
+
+          {/* LeetCode-Style Activity Heatmap Grid */}
+          <ActivityHeatmap />
         </div>
 
         {/* Right Column: AI Insight, Consistency, Strategy Health */}

@@ -92,7 +92,107 @@ async function updateProfile(req, res, next) {
   }
 }
 
+async function getActivityHeatmap(req, res, next) {
+  try {
+    const userId = req.userId;
+    const oneYearAgo = new Date();
+    oneYearAgo.setDate(oneYearAgo.getDate() - 365);
+
+    // Fetch completed workout sessions
+    const completedSessions = await prisma.workoutSession.findMany({
+      where: {
+        userId,
+        status: 'COMPLETED',
+        startedAt: { gte: oneYearAgo }
+      },
+      select: { startedAt: true }
+    });
+
+    // Fetch daily check-ins
+    const checkins = await prisma.dailyCheckIn.findMany({
+      where: {
+        userId,
+        createdAt: { gte: oneYearAgo }
+      },
+      select: { createdAt: true }
+    });
+
+    // Count submissions per YYYY-MM-DD
+    const heatmapData = {};
+    let totalSubmissions = 0;
+
+    const addDateCount = (dateObj) => {
+      if (!dateObj) return;
+      const dateStr = new Date(dateObj).toISOString().split('T')[0];
+      heatmapData[dateStr] = (heatmapData[dateStr] || 0) + 1;
+      totalSubmissions += 1;
+    };
+
+    completedSessions.forEach(s => addDateCount(s.startedAt));
+    checkins.forEach(c => addDateCount(c.createdAt));
+
+    const activeDates = Object.keys(heatmapData).sort();
+    const totalActiveDays = activeDates.length;
+
+    // Calculate streaks
+    let currentStreak = 0;
+    let maxStreak = 0;
+    let tempStreak = 0;
+
+    const todayObj = new Date();
+    const todayStr = todayObj.toISOString().split('T')[0];
+    const yesterdayObj = new Date();
+    yesterdayObj.setDate(yesterdayObj.getDate() - 1);
+    const yesterdayStr = yesterdayObj.toISOString().split('T')[0];
+
+    let prevDate = null;
+    for (const dStr of activeDates) {
+      if (!prevDate) {
+        tempStreak = 1;
+      } else {
+        const diffDays = Math.round((new Date(dStr) - new Date(prevDate)) / (1000 * 60 * 60 * 24));
+        if (diffDays === 1) {
+          tempStreak += 1;
+        } else if (diffDays > 1) {
+          tempStreak = 1;
+        }
+      }
+      if (tempStreak > maxStreak) {
+        maxStreak = tempStreak;
+      }
+      prevDate = dStr;
+    }
+
+    if (heatmapData[todayStr] || heatmapData[yesterdayStr]) {
+      let checkDate = new Date();
+      if (!heatmapData[todayStr] && heatmapData[yesterdayStr]) {
+        checkDate = yesterdayObj;
+      }
+      while (true) {
+        const cStr = checkDate.toISOString().split('T')[0];
+        if (heatmapData[cStr]) {
+          currentStreak += 1;
+          checkDate.setDate(checkDate.getDate() - 1);
+        } else {
+          break;
+        }
+      }
+    }
+
+    return successResponse(res, {
+      heatmapData,
+      totalSubmissions,
+      totalActiveDays,
+      currentStreak,
+      maxStreak
+    }, 'Activity heatmap fetched successfully');
+  } catch (error) {
+    next(error);
+  }
+}
+
 module.exports = {
   getProfile,
   updateProfile,
+  getActivityHeatmap,
 };

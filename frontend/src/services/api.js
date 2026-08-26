@@ -64,6 +64,7 @@ export const api = {
         method: 'PUT',
         body: JSON.stringify(data),
       }),
+    getHeatmap: () => request('/users/activity-heatmap'),
   },
 
   // Check-ins

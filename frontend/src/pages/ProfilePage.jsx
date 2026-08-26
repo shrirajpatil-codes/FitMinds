@@ -6,6 +6,7 @@ import { Badge } from '../components/common/Badge';
 import { Avatar } from '../components/common/Avatar';
 import { Input } from '../components/common/Input';
 import { Alert } from '../components/common/Alert';
+import { ActivityHeatmap } from '../components/profile/ActivityHeatmap';
 import { useApp } from '../context/AppContext';
 
 export const ProfilePage = () => {
@@ -164,6 +165,9 @@ export const ProfilePage = () => {
           </div>
         </div>
       </Card>
+
+      {/* LeetCode-Style Orange Submission & Streak Heatmap */}
+      <ActivityHeatmap />
 
       {/* Profile Form / View */}
       {isEditing ? (
