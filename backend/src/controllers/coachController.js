@@ -43,7 +43,7 @@ async function getCoachContext(req, res, next) {
       recentWorkouts,
       recentSessions,
       recentDecisions,
-      coachStatus: "AI Coach context prepared and ready.",
+      coachStatus: "AI Coach context active.",
     });
   } catch (error) {
     next(error);
@@ -72,41 +72,113 @@ async function askCoach(req, res, next) {
     const load = profile?.lifestyleLoad || 'MODERATE';
     const name = user?.name || 'Student';
 
-    const qLower = message.toLowerCase();
+    const qLower = message.toLowerCase().trim();
     let reply = '';
 
-    if (qLower.includes('weight gain') || qLower.includes('gain weight') || qLower.includes('muscle mass') || qLower.includes('bulk')) {
-      reply = `Hey ${name}! Here is your personalized Weight Gain & Muscle Building strategy:
-1️⃣ Caloric Surplus: Consume 300–500 calories above your maintenance level. Focus on nutrient-dense foods (eggs, oats, milk, paneer/chicken, peanut butter, and rice).
-2️⃣ Progressive Hypertrophy: Aim for 8–12 reps per set with progressive weight or resistance.
-3️⃣ Workout Schedule: Stick to your ${availableTime}-minute workout sessions 4–5 days a week.
-4️⃣ Student Recovery: Sleep 7–8 hours to allow muscle growth and prevent mental exhaustion during classes.`;
-    } else if (qLower.includes('weight loss') || qLower.includes('fat loss') || qLower.includes('lose weight') || qLower.includes('slim') || qLower.includes('diet')) {
-      reply = `Hey ${name}! Here is your personalized Weight Loss & Fat Burning protocol:
-1️⃣ Caloric Deficit: Maintain a moderate 300–400 kcal deficit while keeping protein high (1.6g per kg of body weight) to retain lean muscle.
-2️⃣ High-Intensity Circuits: Perform bodyweight or dumbbell circuits during your ${availableTime}-minute workout sessions.
-3️⃣ Daily Steps: Aim for 8,000–10,000 steps daily walking around campus.
-4️⃣ Hydration & Stress: Drink 3L of water daily and manage exam stress to keep cortisol levels low.`;
-    } else if (qLower.includes('exam') || qLower.includes('busy') || qLower.includes('study') || qLower.includes('test') || qLower.includes('schedule') || qLower.includes('time')) {
-      reply = `Hey ${name}! When academic workload is high (${load}):
-1️⃣ Express Micro-Workouts: Don't drop workouts completely—do a 10–15 minute quick session to boost blood flow to your brain.
-2️⃣ Active Stress Relief: A brief workout improves study focus and reduces exam anxiety.
-3️⃣ Flexible Window: Use your preferred ${profile?.preferredWorkoutWindow || 'flexible'} window whenever you get a break between study blocks.`;
-    } else if (qLower.includes('pain') || qLower.includes('hurt') || qLower.includes('knee') || qLower.includes('sore') || qLower.includes('injury')) {
-      reply = `Hey ${name}! Safety and injury prevention are top priority:
-1️⃣ Deload: Reduce intensity or take 1–2 rest days.
-2️⃣ Warm-Up: Spend 3–5 minutes doing dynamic warm-ups and mobility movements before lifting.
-3️⃣ Check Form: Slow down control on rep lowering. If pain persists, consult a qualified healthcare provider.`;
-    } else if (qLower.includes('diet') || qLower.includes('protein') || qLower.includes('food') || qLower.includes('nutrition') || qLower.includes('eat')) {
-      reply = `Hey ${name}! Quick Student Nutrition Guidelines for your goal (${goal}):
-• Protein: 1.4–1.8g per kg bodyweight (eggs, dal, paneer, soy, whey, chicken).
-• Pre-Workout: A banana or toast 30 minutes before your ${availableTime}-minute session.
-• Post-Workout: Hydrate and eat a balanced meal containing protein and complex carbs within 1-2 hours.`;
-    } else {
-      reply = `Hey ${name}! Based on your student profile (Goal: ${goal}, Experience: ${experience}, Workload: ${load}):
-• Recommended Session Length: ${availableTime} minutes.
-• Strategy Advice: Focus on consistency over perfection! Even short sessions on busy class days build long-term momentum.
-Feel free to ask me anything about weight loss/gain, workout adjustments, nutrition, or managing exercise around your exams!`;
+    // 1. Weight Gain / Muscle Mass / Bulking
+    if (qLower.includes('gain') || qLower.includes('bulk') || qLower.includes('mass') || qLower.includes('weight gain')) {
+      reply = `Hey ${name}! Here is your personalized FITMINDS Weight Gain & Hypertrophy protocol:
+
+💪 1. Caloric Surplus (Clean Bulk):
+Eat 300–500 calories above your daily maintenance. Focus on nutrient-dense foods: eggs, chicken/paneer, oats, peanut butter, brown rice, bananas, and whole milk.
+
+🏋️ 2. Progressive Resistance Training:
+Perform progressive lifting sessions during your ${availableTime}-minute window. Focus on compound exercises (Squats, Push-ups/Bench, Rows, Deadlifts) in the 8–12 rep range with 3–4 sets.
+
+🍚 3. Protein Requirement:
+Target 1.6g–2.2g of protein per kg of bodyweight per day split into 3–4 meals.
+
+😴 4. Recovery & Sleep:
+Get 7–8 hours of quality sleep nightly. Muscle hypertrophy occurs during deep rest, not during the workout itself!`;
+    }
+    // 2. Weight Loss / Fat Loss / Toning
+    else if (qLower.includes('lose') || qLower.includes('fat') || qLower.includes('slim') || qLower.includes('tone') || qLower.includes('weight loss')) {
+      reply = `Hey ${name}! Here is your personalized FITMINDS Weight Loss & Fat Burning plan:
+
+🔥 1. Caloric Deficit:
+Maintain a steady 300–400 calorie deficit per day. Avoid extreme starving diets—keep your energy high for studies!
+
+🏃 2. High-Efficiency Circuits:
+Utilize your ${availableTime}-minute window for High-Intensity Interval Training (HIIT) or fast-paced bodyweight supersets (Jumping jacks, Burpees, Mountain climbers, Squat jumps).
+
+🍳 3. Protect Lean Muscle:
+Keep protein intake high (1.5g per kg of bodyweight) so your body burns pure fat instead of muscle tissue.
+
+🚶 4. Daily Campus Movement:
+Aim for 8,000–10,000 steps daily walking to lectures. Small daily walks add up to massive fat loss over time!`;
+    }
+    // 3. Exam Stress / Academic Workload / Time Management
+    else if (qLower.includes('exam') || qLower.includes('study') || qLower.includes('busy') || qLower.includes('time') || qLower.includes('schedule') || qLower.includes('test')) {
+      reply = `Hey ${name}! Managing fitness during high academic load (${load}):
+
+⚡ 1. Micro-Sessions over Skipping:
+Never drop workouts completely during exams. A 10–12 minute express session boosts oxygen to your brain, enhances memory retention, and lowers cortisol.
+
+🧠 2. Study Break Reset:
+Use your ${profile?.preferredWorkoutWindow || 'flexible'} workout window right between study blocks to clear brain fog.
+
+🧘 3. Active Recovery:
+On intense project submission days, swap heavy lifting for light mobility, yoga stretches, or brisk walking.`;
+    }
+    // 4. Chest / Biceps / Muscle Specific Questions
+    else if (qLower.includes('chest') || qLower.includes('bicep') || qLower.includes('arm') || qLower.includes('leg') || qLower.includes('abs') || qLower.includes('core')) {
+      reply = `Hey ${name}! For targeted muscle development (${qLower.includes('chest') ? 'Chest' : qLower.includes('bicep') ? 'Biceps/Arms' : qLower.includes('abs') ? 'Core/Abs' : 'Legs'}):
+
+🎯 1. Mind-Muscle Connection:
+Focus on controlled tempo—2 seconds down (eccentric) and 1 second explosive push/pull. Quality of reps matters more than weight.
+
+⏱️ 2. Frequency in ${availableTime} Mins:
+Train this muscle group 2x per week with 3–4 targeted exercises (3 sets of 10–12 reps).
+
+🥗 3. Fuel:
+Consume a protein-rich snack (e.g. protein shake, boiled eggs, or Greek yogurt) within 90 minutes post-workout for repair.`;
+    }
+    // 5. Soreness / Pain / Knee / Joint / Injury
+    else if (qLower.includes('pain') || qLower.includes('hurt') || qLower.includes('sore') || qLower.includes('knee') || qLower.includes('injury') || qLower.includes('back')) {
+      reply = `Hey ${name}! Safety and recovery are paramount:
+
+⚠️ 1. Dynamic Deload:
+If you feel sharp pain, stop the exercise immediately. Soreness (DOMS) is normal, but sharp joint pain means you need rest.
+
+🧊 2. Warm-Up & Mobility:
+Spend 4–5 minutes warming up joint fluid before any exercise. Use dynamic leg swings, arm circles, and cat-cow stretches.
+
+💧 3. Hydration & Compression:
+Drink plenty of water and elevate/ice any inflamed joints. If pain lasts >48 hours, consult a physician.`;
+    }
+    // 6. Diet / Protein / Creatine / Supplements
+    else if (qLower.includes('diet') || qLower.includes('protein') || qLower.includes('creatine') || qLower.includes('eat') || qLower.includes('supplement') || qLower.includes('food')) {
+      reply = `Hey ${name}! Essential Student Nutrition Tips:
+
+🥛 1. Accessible Protein Sources:
+Boiled eggs, Paneer, Chicken breast, Tofu/Soy chunks, Greek yogurt, Lentils/Chana, and Whey protein powder.
+
+🍌 2. Pre & Post Workout Fuel:
+- Pre-Workout (30 min before): 1 Banana or PB Toast for instant glycogen.
+- Post-Workout (within 1 hr): Protein + Complex Carbs for fast recovery.
+
+💦 3. Hydration Rule:
+Drink at least 3 Liters of water daily. Dehydration reduces strength output by up to 15%!`;
+    }
+    // 7. Plan Changes / Adaptive System
+    else if (qLower.includes('plan') || qLower.includes('why') || qLower.includes('change') || qLower.includes('adap')) {
+      reply = `Hey ${name}! FITMINDS adaptively updates your workout plan based on:
+• Your daily check-in energy & readiness ratings.
+• Your current academic workload (${load}).
+• Your target goal (${goal}) and available time (${availableTime} mins).
+
+When stress is high, FITMINDS shortens session duration to prevent burnout while keeping your workout streak active!`;
+    }
+    // 8. General / Custom Query Fallback
+    else {
+      reply = `Hey ${name}! Thanks for asking about "${message}".
+
+📌 FITMINDS Recommendation for your profile (Goal: ${goal}, Experience: ${experience}):
+1️⃣ Consistency: Stick to your ${availableTime}-minute workout window 4–5 days a week.
+2️⃣ Adaptability: Adjust workout intensity on days when academic workload is ${load}.
+3️⃣ Execution: Keep rest intervals to 45–60 seconds between sets for maximum efficiency.
+
+Feel free to ask me specifically about weight gain, fat loss, chest/leg routines, student diets, or workout timing anytime!`;
     }
 
     return successResponse(res, {

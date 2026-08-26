@@ -22,7 +22,7 @@ export const LandingPage = () => {
             <Button variant="ghost" size="sm">Sign In</Button>
           </Link>
           <Link to="/register">
-            <Button variant="primary" size="sm">Get Started</Button>
+            <Button variant="primary" size="sm">Register</Button>
           </Link>
         </div>
       </header>
@@ -46,12 +46,12 @@ export const LandingPage = () => {
           <div className="flex items-center justify-center gap-4 pt-4">
             <Link to="/register">
               <Button size="lg" variant="primary" rightIcon={ArrowRight}>
-                Get Started
+                Register Now
               </Button>
             </Link>
-            <Link to="/dashboard">
+            <Link to="/login">
               <Button size="lg" variant="outline">
-                See How It Works
+                Sign In
               </Button>
             </Link>
           </div>
