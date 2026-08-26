@@ -17,7 +17,7 @@ export const OnboardingPage = () => {
     name: userProfile.name || 'Alex Chen',
     age: userProfile.age || 21,
     fitnessExperience: 'INTERMEDIATE',
-    goal: 'CONSISTENCY',
+    goal: 'WEIGHT_LOSS',
     availableTime: '20',
     preferredWindow: 'EVENING',
     equipment: 'BASIC',
@@ -138,10 +138,12 @@ export const OnboardingPage = () => {
               <h3 className="text-base font-semibold text-slate-100">Step 2: Primary Fitness Goal</h3>
               <div className="space-y-2">
                 {[
-                  { label: 'Build strength around classes', val: 'STRENGTH' },
-                  { label: 'Improve workout consistency', val: 'CONSISTENCY' },
-                  { label: 'Stay active & relieve stress', val: 'ACTIVE' },
-                  { label: 'General fitness & mobility', val: 'FITNESS' },
+                  { label: '🔥 Weight Loss (Fat Loss & Toning)', val: 'WEIGHT_LOSS' },
+                  { label: '💪 Weight Gain (Muscle & Mass Building)', val: 'WEIGHT_GAIN' },
+                  { label: '⚡ Build strength around classes', val: 'STRENGTH' },
+                  { label: '📅 Improve workout consistency', val: 'CONSISTENCY' },
+                  { label: '🧘 Stay active & relieve stress', val: 'ACTIVE' },
+                  { label: '🏃 General fitness & mobility', val: 'FITNESS' },
                 ].map(g => (
                   <button
                     key={g.val}

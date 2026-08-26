@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { Zap, Mail, Lock, ArrowRight, AlertCircle } from 'lucide-react';
+import { Zap, Mail, Lock, ArrowRight, UserPlus, AlertCircle } from 'lucide-react';
 import { Button } from '../components/common/Button';
 import { Input } from '../components/common/Input';
 import { Card } from '../components/common/Card';
@@ -32,11 +32,6 @@ export const LoginPage = () => {
     } else {
       setErrorMsg(result?.error || 'Invalid email or password.');
     }
-  };
-
-  const fillDemoUser = () => {
-    setEmail('alex@fitminds.app');
-    setPassword('Password123!');
   };
 
   return (
@@ -89,24 +84,18 @@ export const LoginPage = () => {
             </Button>
           </form>
 
-          <div className="mt-4 pt-4 border-t border-slate-800 flex justify-between items-center text-xs">
-            <span className="text-slate-400">Testing development?</span>
-            <button
-              type="button"
-              onClick={fillDemoUser}
-              className="text-brand font-medium hover:underline hover:text-brand-light"
+          <div className="mt-6 pt-5 border-t border-slate-800 text-center space-y-3">
+            <p className="text-xs text-slate-400">Don't have an account yet?</p>
+            <Button
+              variant="outline"
+              fullWidth
+              leftIcon={UserPlus}
+              onClick={() => navigate('/register')}
             >
-              Fill Demo Credentials
-            </button>
+              Register New Account
+            </Button>
           </div>
         </Card>
-
-        <div className="text-center text-xs text-slate-400">
-          Don't have an account?{' '}
-          <Link to="/register" className="text-brand font-medium hover:underline">
-            Create an account
-          </Link>
-        </div>
       </div>
     </div>
   );

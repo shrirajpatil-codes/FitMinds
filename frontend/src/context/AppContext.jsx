@@ -498,7 +498,7 @@ export const AppProvider = ({ children }) => {
   };
 
   // Method to send coach message
-  const sendCoachMessage = (userText) => {
+  const sendCoachMessage = async (userText) => {
     const userMsg = {
       id: `msg_${Date.now()}_u`,
       sender: 'user',
@@ -506,17 +506,28 @@ export const AppProvider = ({ children }) => {
       time: 'Just now'
     };
 
-    const replyText = mockCoachResponses[userText] || 
-      `FITMINDS analyzed your question about "${userText}". Based on your recent consistency data (${progress.currentStreakDays}-day streak, ${progress.averageDurationMinutes}-min average duration), keeping your sessions flexible around your student schedule continues to be your optimal strategy.`;
+    setCoachMessages(prev => [...prev, userMsg]);
 
-    const aiMsg = {
-      id: `msg_${Date.now()}_ai`,
-      sender: 'ai',
-      text: replyText,
-      time: 'Just now'
-    };
-
-    setCoachMessages(prev => [...prev, userMsg, aiMsg]);
+    try {
+      const res = await api.coach.ask(userText);
+      const replyText = res.data?.reply || `FITMINDS AI Coach received your question about "${userText}".`;
+      const aiMsg = {
+        id: `msg_${Date.now()}_ai`,
+        sender: 'ai',
+        text: replyText,
+        time: 'Just now'
+      };
+      setCoachMessages(prev => [...prev, aiMsg]);
+    } catch (err) {
+      console.error('Coach API call error:', err);
+      const fallbackMsg = {
+        id: `msg_${Date.now()}_ai`,
+        sender: 'ai',
+        text: `FITMINDS AI Coach: Based on your current goals (${userProfile?.goal || 'Fitness'}), focus on consistency and managing your workout length around your student schedule!`,
+        time: 'Just now'
+      };
+      setCoachMessages(prev => [...prev, fallbackMsg]);
+    }
   };
 
   // Reset workout state

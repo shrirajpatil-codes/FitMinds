@@ -165,9 +165,14 @@ export const api = {
       }),
   },
 
-  // AI Coach Context
+  // AI Coach Context & Chat
   coach: {
     context: () => request('/coach/context'),
+    ask: (message) =>
+      request('/coach/ask', {
+        method: 'POST',
+        body: JSON.stringify({ message }),
+      }),
   },
 
   // Health

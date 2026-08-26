@@ -16,10 +16,10 @@ export const ProfilePage = () => {
   const [errorMsg, setErrorMsg] = useState('');
 
   const [formData, setFormData] = useState({
-    name: userProfile.name || currentUser?.name || 'Alex Rivers',
+    name: userProfile.name || currentUser?.name || 'Student User',
     age: userProfile.age || 21,
     fitnessExperience: userProfile.fitnessLevel || 'INTERMEDIATE',
-    fitnessGoal: userProfile.goal || 'CONSISTENCY',
+    fitnessGoal: userProfile.goal || 'WEIGHT_LOSS',
     availableWorkoutTime: userProfile.availableTimeMinutes || 20,
     preferredWorkoutWindow: userProfile.workoutWindow || 'EVENING',
     equipment: userProfile.equipment || 'BASIC',
@@ -76,7 +76,7 @@ export const ProfilePage = () => {
               <h2 className="text-2xl font-bold text-slate-100">{formData.name}</h2>
               <Badge variant="ready">ACTIVE STUDENT</Badge>
             </div>
-            <p className="text-xs text-slate-400">Computer Science Undergraduate</p>
+            <p className="text-xs text-slate-400">FITMINDS Registered Student</p>
             <p className="text-xs text-brand font-medium">{currentUser?.email || userProfile.email}</p>
           </div>
           <Button
@@ -130,11 +130,12 @@ export const ProfilePage = () => {
                   onChange={(e) => setFormData({ ...formData, fitnessGoal: e.target.value })}
                   className="w-full bg-slate-900 border border-slate-800 rounded-xl p-3 text-slate-200 focus:border-brand focus:outline-none"
                 >
-                  <option value="STRENGTH">STRENGTH</option>
-                  <option value="FITNESS">FITNESS</option>
+                  <option value="WEIGHT_LOSS">WEIGHT LOSS (Fat Loss)</option>
+                  <option value="WEIGHT_GAIN">WEIGHT GAIN (Muscle Mass)</option>
+                  <option value="STRENGTH">BUILD STRENGTH</option>
                   <option value="CONSISTENCY">CONSISTENCY</option>
-                  <option value="ACTIVE">ACTIVE</option>
-                  <option value="GENERAL">GENERAL</option>
+                  <option value="ACTIVE">STAY ACTIVE</option>
+                  <option value="FITNESS">GENERAL FITNESS</option>
                 </select>
               </div>
 

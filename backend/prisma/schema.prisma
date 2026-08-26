@@ -26,6 +26,8 @@ enum FitnessGoal {
   CONSISTENCY
   ACTIVE
   GENERAL
+  WEIGHT_GAIN
+  WEIGHT_LOSS
 }
 
 enum PreferredWorkoutWindow {
