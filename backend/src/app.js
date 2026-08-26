@@ -18,9 +18,9 @@ const healthRoutes = require('./routes/healthRoutes');
 
 const app = express();
 
-// Middleware
+// Allow all origins in development (supports localhost:3000, 3001, 5173, etc.)
 app.use(cors({
-  origin: ['http://localhost:5173', 'http://127.0.0.1:5173', 'http://localhost:3000'],
+  origin: true,
   credentials: true,
 }));
 
