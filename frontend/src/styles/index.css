@@ -1,0 +1,45 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --color-bg-default: #0B0F17;
+    --color-bg-surface: #111726;
+    --color-bg-hover: #1B2436;
+    --color-bg-border: #1E293B;
+  }
+
+  body {
+    background-color: #0B0F17;
+    color: #F8FAFC;
+    font-family: 'Inter', system-ui, sans-serif;
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+}
+
+/* Custom scrollbar styling */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: #0B0F17;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #1E293B;
+  border-radius: 9999px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #334155;
+}
+
+/* Focus outline accessibility styles */
+:focus-visible {
+  outline: 2px solid #00F0FF;
+  outline-offset: 2px;
+}

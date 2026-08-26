@@ -1,0 +1,5 @@
+version: '3.8'
+
+# FITMINDS Docker Composition Structure
+# Services will be configured as implementation progresses.
+services: {}
