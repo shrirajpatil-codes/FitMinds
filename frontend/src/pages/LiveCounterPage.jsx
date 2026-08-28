@@ -4,6 +4,7 @@ import { Camera, Pause, Play, CheckCircle, ArrowLeft, ShieldAlert } from 'lucide
 import { Button } from '../components/common/Button';
 import { Card } from '../components/common/Card';
 import { Badge } from '../components/common/Badge';
+import { CameraViewfinder } from '../components/common/CameraViewfinder';
 import { useApp } from '../context/AppContext';
 
 export const LiveCounterPage = () => {
@@ -37,7 +38,7 @@ export const LiveCounterPage = () => {
           Back to Manual Workout
         </Button>
         <Badge variant="brand" icon={Camera}>
-          FUTURE CAMERA FEATURE PLACEHOLDER
+          LIVE AI CAMERA COUNTER
         </Badge>
       </div>
 
@@ -45,41 +46,21 @@ export const LiveCounterPage = () => {
       <div className="p-3 rounded-xl bg-amber-950/40 border border-amber-800/50 text-xs text-amber-200 flex items-center gap-2">
         <ShieldAlert className="w-4 h-4 text-amber-400 shrink-0" />
         <span>
-          <strong>Scope Reminder:</strong> Live camera is for rep counting ONLY. No video recording, posture analysis, or cloud storage.
+          <strong>Privacy Note:</strong> Camera processing happens locally in your browser. No video recordings are stored or uploaded to any server.
         </span>
       </div>
 
       {/* Main Grid — Stacked vertically on Mobile, 2-cols on Desktop */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        {/* Camera Placeholder Area (2 cols) */}
+        {/* Camera Feed Container (2 cols) */}
         <div className="md:col-span-2">
-          <Card variant="default" className="p-0 overflow-hidden relative aspect-video bg-slate-950 border border-slate-800 flex flex-col items-center justify-center">
-            {/* Live Camera Viewfinder Overlay */}
-            <div className="absolute inset-4 border-2 border-dashed border-brand/40 rounded-2xl pointer-events-none flex flex-col justify-between p-4">
-              <div className="flex items-center justify-between">
-                <span className="px-2.5 py-1 rounded-md bg-slate-900/90 border border-slate-800 text-[10px] font-bold text-brand uppercase tracking-wider flex items-center gap-1.5">
-                  <span className="w-2 h-2 rounded-full bg-emerald-400 animate-ping" />
-                  Live Camera — Rep Counting Only
-                </span>
-                <span className="text-[10px] text-slate-400 font-mono">1080p Viewfinder Mockup</span>
-              </div>
-              <div className="text-center text-slate-500 text-xs font-mono">
-                Pose Tracking Bounding Mesh Placeholder
-              </div>
-            </div>
-
-            {/* Central Camera Graphic */}
-            <div className="text-center space-y-2 z-10 p-6">
-              <div className="w-16 h-16 rounded-2xl bg-slate-900 border border-slate-800 flex items-center justify-center text-brand mx-auto shadow-brand-glow">
-                <Camera className="w-8 h-8" />
-              </div>
-              <p className="text-sm font-semibold text-slate-300">Live Camera Overlay</p>
-              <p className="text-xs text-slate-500 max-w-xs">
-                Position your device 5-8 feet away with full body visible in the frame.
-              </p>
-            </div>
-          </Card>
+          <CameraViewfinder
+            activeExerciseName={currentExercise.name}
+            targetReps={targetReps}
+            onRepDetected={() => setRepCount(prev => prev + 1)}
+          />
         </div>
+
 
         {/* Rep Counter Details Sidebar (1 col) */}
         <div className="space-y-4">

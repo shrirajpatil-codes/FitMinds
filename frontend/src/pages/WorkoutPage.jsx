@@ -14,6 +14,8 @@ import { Button } from '../components/common/Button';
 import { Card } from '../components/common/Card';
 import { Badge } from '../components/common/Badge';
 import { ProgressBar } from '../components/common/ProgressBar';
+import { Modal } from '../components/common/Modal';
+import { CameraViewfinder } from '../components/common/CameraViewfinder';
 import { useApp } from '../context/AppContext';
 
 export const WorkoutPage = () => {
@@ -30,10 +32,12 @@ export const WorkoutPage = () => {
 
   const [isPaused, setIsPaused] = useState(false);
   const [restSeconds, setRestSeconds] = useState(28);
+  const [isCameraModalOpen, setIsCameraModalOpen] = useState(false);
 
   const currentExercise = currentPlan.exercises[activeExerciseIndex] || currentPlan.exercises[0];
   const totalExercises = currentPlan.exercises.length;
   const isLastExercise = activeExerciseIndex === totalExercises - 1 && activeSet === currentExercise.sets;
+
 
   // Rest Timer Countdown Simulation
   useEffect(() => {
@@ -77,7 +81,7 @@ export const WorkoutPage = () => {
             variant="outline"
             size="sm"
             leftIcon={Camera}
-            onClick={() => navigate('/live-counter')}
+            onClick={() => setIsCameraModalOpen(true)}
           >
             Live Camera Mode
           </Button>
@@ -176,6 +180,42 @@ export const WorkoutPage = () => {
           ))}
         </div>
       </div>
+
+      {/* Live Camera Viewfinder Modal */}
+      <Modal
+        isOpen={isCameraModalOpen}
+        onClose={() => setIsCameraModalOpen(false)}
+        title="Live Workout Camera Feed"
+        description={`AI Pose Tracker for ${currentExercise.name}`}
+        maxWidth="max-w-3xl"
+        footer={
+          <div className="flex items-center justify-between w-full">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => {
+                setIsCameraModalOpen(false);
+                navigate('/live-counter');
+              }}
+            >
+              Open Fullscreen Counter Page
+            </Button>
+            <Button
+              variant="secondary"
+              size="sm"
+              onClick={() => setIsCameraModalOpen(false)}
+            >
+              Close Camera
+            </Button>
+          </div>
+        }
+      >
+        <CameraViewfinder
+          activeExerciseName={currentExercise.name}
+          targetReps={currentExercise.reps}
+        />
+      </Modal>
     </div>
   );
 };
+

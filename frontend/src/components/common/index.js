@@ -16,3 +16,5 @@ export { EmptyState } from './EmptyState';
 export { Alert } from './Alert';
 export { StatCard } from './StatCard';
 export { PlanAdjustmentModal } from './PlanAdjustmentModal';
+export { CameraViewfinder } from './CameraViewfinder';
+

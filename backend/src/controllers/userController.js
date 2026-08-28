@@ -47,7 +47,6 @@ async function updateProfile(req, res, next) {
       });
     }
 
-    // Fetch existing profile to get current height/weight if only one is passed
     const existingProfile = await prisma.profile.findUnique({ where: { userId: req.userId } });
 
     const newHeight = heightCm !== undefined ? parseFloat(heightCm) : existingProfile?.heightCm;
@@ -98,38 +97,53 @@ async function getActivityHeatmap(req, res, next) {
     const oneYearAgo = new Date();
     oneYearAgo.setDate(oneYearAgo.getDate() - 365);
 
-    // Fetch completed workout sessions
-    const completedSessions = await prisma.workoutSession.findMany({
-      where: {
-        userId,
-        status: 'COMPLETED',
-        startedAt: { gte: oneYearAgo }
-      },
-      select: { startedAt: true }
-    });
+    // Fetch all user activity records across the platform
+    const [workoutSessions, dailyCheckIns, weeklyReflections, workoutPlans, experiments] = await Promise.all([
+      prisma.workoutSession.findMany({
+        where: { userId, createdAt: { gte: oneYearAgo } },
+        select: { startedAt: true, completedAt: true, createdAt: true }
+      }),
+      prisma.dailyCheckIn.findMany({
+        where: { userId, createdAt: { gte: oneYearAgo } },
+        select: { date: true, createdAt: true }
+      }),
+      prisma.weeklyReflection.findMany({
+        where: { userId, createdAt: { gte: oneYearAgo } },
+        select: { createdAt: true }
+      }),
+      prisma.workoutPlan.findMany({
+        where: { userId, createdAt: { gte: oneYearAgo } },
+        select: { createdAt: true }
+      }),
+      prisma.experiment.findMany({
+        where: { userId, createdAt: { gte: oneYearAgo } },
+        select: { createdAt: true }
+      })
+    ]);
 
-    // Fetch daily check-ins
-    const checkins = await prisma.dailyCheckIn.findMany({
-      where: {
-        userId,
-        createdAt: { gte: oneYearAgo }
-      },
-      select: { createdAt: true }
-    });
-
-    // Count submissions per YYYY-MM-DD
     const heatmapData = {};
     let totalSubmissions = 0;
 
     const addDateCount = (dateObj) => {
       if (!dateObj) return;
-      const dateStr = new Date(dateObj).toISOString().split('T')[0];
+      const d = new Date(dateObj);
+      if (isNaN(d.getTime())) return;
+      const yyyy = d.getFullYear();
+      const mm = String(d.getMonth() + 1).padStart(2, '0');
+      const dd = String(d.getDate()).padStart(2, '0');
+      const dateStr = `${yyyy}-${mm}-${dd}`;
+
       heatmapData[dateStr] = (heatmapData[dateStr] || 0) + 1;
       totalSubmissions += 1;
     };
 
-    completedSessions.forEach(s => addDateCount(s.startedAt));
-    checkins.forEach(c => addDateCount(c.createdAt));
+    workoutSessions.forEach(s => {
+      addDateCount(s.completedAt || s.startedAt || s.createdAt);
+    });
+    dailyCheckIns.forEach(c => addDateCount(c.createdAt || c.date));
+    weeklyReflections.forEach(r => addDateCount(r.createdAt));
+    workoutPlans.forEach(p => addDateCount(p.createdAt));
+    experiments.forEach(e => addDateCount(e.createdAt));
 
     const activeDates = Object.keys(heatmapData).sort();
     const totalActiveDays = activeDates.length;
@@ -139,11 +153,12 @@ async function getActivityHeatmap(req, res, next) {
     let maxStreak = 0;
     let tempStreak = 0;
 
-    const todayObj = new Date();
-    const todayStr = todayObj.toISOString().split('T')[0];
-    const yesterdayObj = new Date();
-    yesterdayObj.setDate(yesterdayObj.getDate() - 1);
-    const yesterdayStr = yesterdayObj.toISOString().split('T')[0];
+    const today = new Date();
+    const todayStr = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
+    
+    const yesterday = new Date();
+    yesterday.setDate(yesterday.getDate() - 1);
+    const yesterdayStr = `${yesterday.getFullYear()}-${String(yesterday.getMonth() + 1).padStart(2, '0')}-${String(yesterday.getDate()).padStart(2, '0')}`;
 
     let prevDate = null;
     for (const dStr of activeDates) {
@@ -166,10 +181,10 @@ async function getActivityHeatmap(req, res, next) {
     if (heatmapData[todayStr] || heatmapData[yesterdayStr]) {
       let checkDate = new Date();
       if (!heatmapData[todayStr] && heatmapData[yesterdayStr]) {
-        checkDate = yesterdayObj;
+        checkDate = yesterday;
       }
       while (true) {
-        const cStr = checkDate.toISOString().split('T')[0];
+        const cStr = `${checkDate.getFullYear()}-${String(checkDate.getMonth() + 1).padStart(2, '0')}-${String(checkDate.getDate()).padStart(2, '0')}`;
         if (heatmapData[cStr]) {
           currentStreak += 1;
           checkDate.setDate(checkDate.getDate() - 1);
