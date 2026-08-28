@@ -113,8 +113,36 @@ export const LiveCounterPage = () => {
               </Button>
             </div>
           </Card>
+
+          {/* Posture Correction Coaching Guidelines */}
+          <Card variant="default" className="p-4 space-y-3">
+            <div className="flex items-center justify-between">
+              <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">POSTURE COACH</span>
+              <span className="text-[10px] font-bold text-emerald-400 bg-emerald-950/60 px-2 py-0.5 rounded border border-emerald-800">
+                ACTIVE
+              </span>
+            </div>
+            <p className="text-xs text-slate-300 font-medium">
+              Keep full body in frame for real-time biomechanical feedback & voice alerts.
+            </p>
+            <div className="space-y-1.5 text-[11px] text-slate-400 pt-1">
+              <div className="flex items-center gap-2">
+                <span className="w-2 h-2 rounded-full bg-emerald-400" />
+                <span>Green line = Perfect posture range</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <span className="w-2 h-2 rounded-full bg-amber-400" />
+                <span>Amber line = Spine / Knee form warning</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <span className="w-2 h-2 rounded-full bg-rose-400" />
+                <span>Red line = Injury risk fault detected</span>
+              </div>
+            </div>
+          </Card>
         </div>
       </div>
     </div>
   );
 };
+
