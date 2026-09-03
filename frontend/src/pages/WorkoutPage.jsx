@@ -52,11 +52,11 @@ export const WorkoutPage = () => {
 
   const handleCompleteSet = () => {
     setRestSeconds(currentExercise.restSeconds || 30);
-    if (isLastExercise) {
+    if (isLastExercise || activeExerciseIndex >= totalExercises - 1 && activeSet >= currentExercise.sets) {
       finishWorkout('Good', 'Completed smoothly');
       navigate('/session-summary');
     } else {
-      completeCurrentSet();
+      completeCurrentSet(currentExercise.sets);
     }
   };
 

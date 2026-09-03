@@ -398,26 +398,36 @@ export const AppProvider = ({ children }) => {
   };
 
   // Workout Execution state setters
-  const completeCurrentSet = (totalSets) => {
+  const completeCurrentSet = (totalSetsParam) => {
+    const exerciseList = currentPlan?.exercises || todayWorkoutPlan.exercises;
+    const currentEx = exerciseList[activeExerciseIndex] || exerciseList[0];
+    const totalSets = totalSetsParam || currentEx?.sets || 3;
+
     if (activeSet < totalSets) {
       setActiveSet(prev => prev + 1);
     } else {
       setCompletedExerciseIds(prev => [...prev, activeExerciseIndex]);
       setActiveSet(1);
-      setActiveExerciseIndex(prev => prev + 1);
+      setActiveExerciseIndex(prev => Math.min(prev + 1, exerciseList.length - 1));
     }
   };
 
   const skipCurrentExercise = () => {
+    const exerciseList = currentPlan?.exercises || todayWorkoutPlan.exercises;
     setCompletedExerciseIds(prev => [...prev, activeExerciseIndex]);
     setActiveSet(1);
-    setActiveExerciseIndex(prev => prev + 1);
+    setActiveExerciseIndex(prev => Math.min(prev + 1, exerciseList.length - 1));
   };
 
   const finishWorkout = async (feedback = 'GOOD') => {
+    const totalPlanExercises = currentPlan?.exercises?.length || 3;
+    const completedCount = Math.min(completedExerciseIds.length + 1, totalPlanExercises);
     const summary = {
-      completedExercisesCount: completedExerciseIds.length + 1,
-      totalDurationMinutes: currentPlan.durationMinutes,
+      completedAt: 'Just now',
+      durationMinutes: currentPlan.durationMinutes,
+      exercisesCompletedCount: completedCount,
+      totalSetsCompleted: completedCount * 3,
+      totalRepsCount: completedCount * 30,
       streakUpdated: progress.currentStreakDays + 1,
       feedback
     };
@@ -427,9 +437,9 @@ export const AppProvider = ({ children }) => {
       try {
         await api.sessions.complete(activeSessionId, {
           actualDurationMinutes: currentPlan.durationMinutes,
-          exercisesCompleted: summary.completedExercisesCount,
-          setsCompleted: summary.completedExercisesCount * 3,
-          repsCompleted: summary.completedExercisesCount * 30,
+          exercisesCompleted: summary.exercisesCompletedCount,
+          setsCompleted: summary.totalSetsCompleted,
+          repsCompleted: summary.totalRepsCount,
           completionPercentage: 100.0
         });
 

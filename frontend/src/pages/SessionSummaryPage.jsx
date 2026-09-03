@@ -6,6 +6,7 @@ import { Card } from '../components/common/Card';
 import { StatCard } from '../components/common/StatCard';
 import { Textarea } from '../components/common/Textarea';
 import { Alert } from '../components/common/Alert';
+import { ConfettiCelebration } from '../components/common/ConfettiCelebration';
 import { useApp } from '../context/AppContext';
 
 export const SessionSummaryPage = () => {
@@ -23,17 +24,25 @@ export const SessionSummaryPage = () => {
   };
 
   return (
-    <div className="max-w-3xl mx-auto space-y-6">
+    <div className="max-w-3xl mx-auto space-y-6 relative">
+      {/* Particle Explosion Confetti Celebration */}
+      <ConfettiCelebration />
+
       {/* Header Banner */}
-      <Card variant="highlighted" className="p-8 text-center space-y-4">
-        <div className="w-16 h-16 rounded-2xl bg-emerald-950/80 border border-emerald-800 flex items-center justify-center text-emerald-400 mx-auto shadow-sm">
-          <CheckCircle2 className="w-8 h-8" />
+      <Card variant="highlighted" className="p-8 text-center space-y-4 relative overflow-hidden">
+        <div className="w-20 h-20 rounded-3xl bg-gradient-to-tr from-emerald-600 via-teal-500 to-cyan-400 p-0.5 mx-auto shadow-brand-glow animate-bounce">
+          <div className="w-full h-full rounded-[22px] bg-slate-950 flex items-center justify-center text-emerald-400">
+            <CheckCircle2 className="w-10 h-10" />
+          </div>
         </div>
 
         <div>
+          <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-emerald-950/80 border border-emerald-800 text-emerald-300 text-xs font-semibold mb-2">
+            <Sparkles className="w-3.5 h-3.5" /> WORKOUT VICTORY!
+          </div>
           <h1 className="text-3xl font-extrabold text-slate-100 tracking-tight">Workout Complete!</h1>
-          <p className="text-xs text-slate-400 mt-1">
-            Great job! FITMINDS updated your consistency streak and logged session signals.
+          <p className="text-xs text-slate-400 mt-1 max-w-md mx-auto">
+            Awesome effort! FITMINDS logged your session, extended your streak, and recalibrated your adaptive strategy.
           </p>
         </div>
 

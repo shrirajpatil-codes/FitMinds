@@ -17,4 +17,5 @@ export { Alert } from './Alert';
 export { StatCard } from './StatCard';
 export { PlanAdjustmentModal } from './PlanAdjustmentModal';
 export { CameraViewfinder } from './CameraViewfinder';
+export { ConfettiCelebration } from './ConfettiCelebration';
 
