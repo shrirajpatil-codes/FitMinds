@@ -8,14 +8,12 @@ import {
   CheckCircle2,
   Aperture,
   ShieldCheck,
-  Volume2,
-  VolumeX,
   Activity,
   AlertTriangle,
   UserX
 } from 'lucide-react';
 import { Button } from './Button';
-import { analyzeExercisePosture, speakPostureFeedback } from '../../utils/postureAnalyzer';
+import { analyzeExercisePosture } from '../../utils/postureAnalyzer';
 import { CVExerciseEngine } from '../../utils/cvExerciseEngine';
 
 /**
@@ -317,7 +315,6 @@ export const CameraViewfinder = ({
   const [capturedPhoto, setCapturedPhoto] = useState(null);
   const [showPhotoModal, setShowPhotoModal] = useState(false);
   const [showHudOverlay, setShowHudOverlay] = useState(true);
-  const [isAudioMuted, setIsAudioMuted] = useState(false);
   const [isFlashActive, setIsFlashActive] = useState(false);
 
   // Fully Automatic Human Detection State
@@ -524,9 +521,7 @@ export const CameraViewfinder = ({
 
       setPostureMetrics(analysis);
 
-      if (analysis.voiceCue && (analysis.postureState === 'WARNING' || analysis.postureState === 'FAULT')) {
-        speakPostureFeedback(analysis.voiceCue, isAudioMuted);
-
+      if (analysis.postureState === 'WARNING' || analysis.postureState === 'FAULT') {
         setFormLog(prev => {
           if (prev.length > 0 && prev[0].msg === analysis.feedbackMessage) return prev;
           return [{ time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' }), msg: analysis.feedbackMessage, state: analysis.postureState }, ...prev.slice(0, 4)];
@@ -778,7 +773,7 @@ export const CameraViewfinder = ({
               No Human Detected
             </h3>
             <p className="text-xs text-slate-400 max-w-sm mt-1 leading-relaxed">
-              No human body detected in camera view. Step into frame facing the camera. Posture tracking & voice assistance will activate automatically.
+              No human body detected in camera view. Step into frame facing the camera. Posture tracking & form analysis will activate automatically.
             </p>
           </div>
         )}
@@ -812,19 +807,6 @@ export const CameraViewfinder = ({
                   <span>{postureMetrics.postureScore}% Form Score</span>
                 </div>
               )}
-
-              {/* Voice Coach Mute Toggle */}
-              <button
-                onClick={() => setIsAudioMuted(!isAudioMuted)}
-                className={`p-2 rounded-xl text-xs font-medium backdrop-blur-md transition-colors border ${
-                  !isAudioMuted
-                    ? 'bg-brand/20 border-brand/40 text-brand'
-                    : 'bg-slate-900/80 border-slate-800 text-slate-400 hover:text-slate-200'
-                }`}
-                title={isAudioMuted ? 'Unmute Voice Coach' : 'Mute Voice Coach'}
-              >
-                {!isAudioMuted ? <Volume2 className="w-4 h-4" /> : <VolumeX className="w-4 h-4 text-slate-500" />}
-              </button>
 
               <button
                 onClick={() => setShowHudOverlay(!showHudOverlay)}

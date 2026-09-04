@@ -16,31 +16,10 @@ export const calculateAngle = (pA, pB, pC) => {
   return Math.round(angle);
 };
 
-// Web Speech Synthesis Audio Feedback Manager
-let lastSpokenTime = 0;
-const SPEECH_THROTTLE_MS = 4000; // Speak at most once every 4 seconds to avoid audio clutter
-
-export const speakPostureFeedback = (text, isMuted = false) => {
-  if (isMuted || !text || !('speechSynthesis' in window)) return;
-  const now = Date.now();
-  if (now - lastSpokenTime < SPEECH_THROTTLE_MS) return;
-
-  try {
-    window.speechSynthesis.cancel(); // Clear queued speech
-    const utterance = new SpeechSynthesisUtterance(text);
-    utterance.rate = 1.05;
-    utterance.pitch = 1.0;
-    utterance.volume = 0.9;
-
-    const voices = window.speechSynthesis.getVoices();
-    const engVoice = voices.find(v => v.lang.startsWith('en') && (v.name.includes('Google') || v.name.includes('Natural'))) || voices[0];
-    if (engVoice) utterance.voice = engVoice;
-
-    window.speechSynthesis.speak(utterance);
-    lastSpokenTime = now;
-  } catch (err) {
-    console.warn('Speech synthesis error:', err);
-  }
+// Web Speech Synthesis Audio Feedback Manager (Disabled)
+export const speakPostureFeedback = () => {
+  // Voice assistance disabled
+  return;
 };
 
 /**

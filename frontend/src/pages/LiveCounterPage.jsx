@@ -170,7 +170,7 @@ export const LiveCounterPage = () => {
               </span>
             </div>
             <p className="text-xs text-slate-300 font-medium">
-              Keep full body in frame for real-time biomechanical feedback & voice alerts.
+              Keep full body in frame for real-time biomechanical feedback & form HUD.
             </p>
             <div className="space-y-1.5 text-[11px] text-slate-400 pt-1">
               <div className="flex items-center gap-2">
