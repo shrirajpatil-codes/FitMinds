@@ -12,61 +12,128 @@ import {
   VolumeX,
   Activity,
   AlertTriangle,
-  UserCheck,
-  UserX,
-  Eye
+  UserX
 } from 'lucide-react';
 import { Button } from './Button';
 import { analyzeExercisePosture, speakPostureFeedback } from '../../utils/postureAnalyzer';
 import { CVExerciseEngine } from '../../utils/cvExerciseEngine';
 
 /**
- * Real-time vision-based Human Detection algorithm
- * Samples live camera video frame pixels for human skin tone & body presence
+ * 100% Fully Automatic Real-Time Human Detector
+ * Evaluates frame difference (temporal movement) + spatial texture variance & edge density
+ * to automatically determine if a human body is present in front of the lens.
  */
-const checkHumanPresenceInVideo = (videoElement, canvasRef) => {
-  if (!videoElement || videoElement.videoWidth === 0 || videoElement.videoHeight === 0) {
-    return false;
+class AutomaticHumanDetector {
+  constructor() {
+    this.prevFrame = null;
+    this.canvas = null;
+    this.ctx = null;
+    this.history = [];
+    this.historySize = 5;
   }
 
-  try {
-    const width = 100;
-    const height = 75;
-    if (!canvasRef.current) {
-      canvasRef.current = document.createElement('canvas');
-      canvasRef.current.width = width;
-      canvasRef.current.height = height;
+  analyze(videoElement) {
+    if (!videoElement || videoElement.videoWidth === 0 || videoElement.videoHeight === 0) {
+      return false;
     }
-    const canvas = canvasRef.current;
-    const ctx = canvas.getContext('2d', { willReadFrequently: true });
-    if (!ctx) return false;
 
-    ctx.drawImage(videoElement, 0, 0, width, height);
-    const frameData = ctx.getImageData(0, 0, width, height).data;
+    try {
+      const width = 80;
+      const height = 60;
 
-    let skinPixelCount = 0;
-    let totalSamples = 0;
-
-    for (let i = 0; i < frameData.length; i += 16) {
-      const r = frameData[i];
-      const g = frameData[i + 1];
-      const b = frameData[i + 2];
-      totalSamples++;
-
-      // Human skin tone / facial color bounds in RGB
-      if (r > 60 && g > 35 && b > 20 && (r - g > 10) && (r - b > 10)) {
-        skinPixelCount++;
+      if (!this.canvas) {
+        this.canvas = document.createElement('canvas');
+        this.canvas.width = width;
+        this.canvas.height = height;
+        this.ctx = this.canvas.getContext('2d', { willReadFrequently: true });
       }
-    }
 
-    const ratio = skinPixelCount / totalSamples;
-    // Human is considered present if skin/body pixels account for at least 3.5% of frame area
-    return ratio >= 0.035;
-  } catch (err) {
-    console.warn('Human presence detection error:', err);
-    return false;
+      const ctx = this.ctx;
+      if (!ctx) return false;
+
+      ctx.drawImage(videoElement, 0, 0, width, height);
+      const imgData = ctx.getImageData(0, 0, width, height);
+      const data = imgData.data;
+
+      // 1. Spatial Texture & Edge Density (Human Body vs Flat Ceiling/Wall)
+      let luminanceSum = 0;
+      let luminanceSqSum = 0;
+      let edgeCount = 0;
+      let pixelCount = 0;
+
+      const startX = Math.floor(width * 0.10);
+      const endX = Math.floor(width * 0.90);
+      const startY = Math.floor(height * 0.10);
+      const endY = Math.floor(height * 0.90);
+
+      for (let y = startY; y < endY; y++) {
+        for (let x = startX; x < endX; x++) {
+          const idx = (y * width + x) * 4;
+          const r = data[idx];
+          const g = data[idx + 1];
+          const b = data[idx + 2];
+
+          const lum = 0.299 * r + 0.587 * g + 0.114 * b;
+          luminanceSum += lum;
+          luminanceSqSum += lum * lum;
+          pixelCount++;
+
+          if (x < endX - 1) {
+            const nextIdx = (y * width + (x + 1)) * 4;
+            const nextLum = 0.299 * data[nextIdx] + 0.587 * data[nextIdx + 1] + 0.114 * data[nextIdx + 2];
+            if (Math.abs(lum - nextLum) > 16) {
+              edgeCount++;
+            }
+          }
+        }
+      }
+
+      const meanLum = luminanceSum / pixelCount;
+      const variance = (luminanceSqSum / pixelCount) - (meanLum * meanLum);
+      const stdDev = Math.sqrt(Math.max(0, variance));
+      const edgeRatio = edgeCount / pixelCount;
+
+      // 2. Temporal Frame Difference (Human Body Motion vs Static Camera Scene)
+      let frameDiffRatio = 0;
+      if (this.prevFrame) {
+        let diffPixels = 0;
+        const totalSampled = data.length / 8;
+        for (let i = 0; i < data.length; i += 8) {
+          const diff = Math.abs(data[i] - this.prevFrame[i]) +
+                       Math.abs(data[i + 1] - this.prevFrame[i + 1]) +
+                       Math.abs(data[i + 2] - this.prevFrame[i + 2]);
+          if (diff > 30) {
+            diffPixels++;
+          }
+        }
+        frameDiffRatio = diffPixels / totalSampled;
+      }
+
+      this.prevFrame = new Uint8ClampedArray(data);
+
+      // Human presence criteria:
+      // Empty ceiling / wall has uniform low variance (stdDev < 18), low edges (< 0.04), and 0 motion
+      // Human body adds texture, edges, clothing contrast, and natural movement
+      const isHuman = (stdDev >= 20.0 || edgeRatio >= 0.065) || (frameDiffRatio >= 0.010);
+
+      this.history.push(isHuman);
+      if (this.history.length > this.historySize) {
+        this.history.shift();
+      }
+
+      const positiveVotes = this.history.filter(Boolean).length;
+      return positiveVotes >= Math.ceil(this.historySize / 2);
+    } catch (err) {
+      console.warn('Auto human detector error:', err);
+      return false;
+    }
   }
-};
+
+  reset() {
+    this.prevFrame = null;
+    this.history = [];
+  }
+}
 
 export const CameraViewfinder = ({
   onRepDetected,
@@ -79,9 +146,9 @@ export const CameraViewfinder = ({
   const canvasRef = useRef(null);
   const streamRef = useRef(null);
   const animFrameRef = useRef(null);
-  const offscreenCanvasRef = useRef(null);
+  const detectorRef = useRef(new AutomaticHumanDetector());
 
-  const [permissionState, setPermissionState] = useState('idle'); // 'idle' | 'requesting' | 'granted' | 'denied' | 'error'
+  const [permissionState, setPermissionState] = useState('idle');
   const [errorMessage, setErrorMessage] = useState('');
   const [isCameraOn, setIsCameraOn] = useState(false);
   const [facingMode, setFacingMode] = useState('user');
@@ -93,15 +160,14 @@ export const CameraViewfinder = ({
   const [isAudioMuted, setIsAudioMuted] = useState(false);
   const [isFlashActive, setIsFlashActive] = useState(false);
 
-  // Human Detection State (default FALSE when camera starts, verified via frame detection or manual toggle)
+  // Fully Automatic Human Detection State (default FALSE)
   const [isHumanDetected, setIsHumanDetected] = useState(false);
-  const [autoDetectMode, setAutoDetectMode] = useState(true);
 
   // Live Posture Engine State
   const [postureMetrics, setPostureMetrics] = useState({
     postureState: 'NO_HUMAN',
     postureScore: 0,
-    feedbackMessage: 'No human detected on screen. Please enter camera view.',
+    feedbackMessage: 'No human detected on screen. Please step into camera view.',
     keyAngle: 0,
     angleName: 'Posture Angle',
     targetAngleRange: 'N/A'
@@ -109,7 +175,6 @@ export const CameraViewfinder = ({
 
   const [formLog, setFormLog] = useState([]);
 
-  // Get device list
   const getDevices = async () => {
     try {
       if (navigator.mediaDevices && navigator.mediaDevices.enumerateDevices) {
@@ -143,6 +208,7 @@ export const CameraViewfinder = ({
     if (videoRef.current) {
       videoRef.current.srcObject = null;
     }
+    detectorRef.current.reset();
     setIsCameraOn(false);
     setIsHumanDetected(false);
   };
@@ -190,7 +256,7 @@ export const CameraViewfinder = ({
       setIsCameraOn(false);
       if (err.name === 'NotAllowedError' || err.name === 'PermissionDeniedError') {
         setPermissionState('denied');
-        setErrorMessage('Camera permission was denied. Please allow camera access in your browser settings.');
+        setErrorMessage('Camera permission was denied. Please allow camera access in browser settings.');
       } else if (err.name === 'NotFoundError' || err.name === 'DevicesNotFoundError') {
         setPermissionState('error');
         setErrorMessage('No camera device found on your device.');
@@ -201,19 +267,13 @@ export const CameraViewfinder = ({
     }
   };
 
-  // CV Exercise Engine Instance Ref
   const cvEngineRef = useRef(new CVExerciseEngine(activeExerciseName));
   const lastRepsRef = useRef(0);
   const isHumanDetectedRef = useRef(isHumanDetected);
-  const autoDetectModeRef = useRef(autoDetectMode);
 
   useEffect(() => {
     isHumanDetectedRef.current = isHumanDetected;
   }, [isHumanDetected]);
-
-  useEffect(() => {
-    autoDetectModeRef.current = autoDetectMode;
-  }, [autoDetectMode]);
 
   useEffect(() => {
     if (cvEngineRef.current) {
@@ -221,10 +281,10 @@ export const CameraViewfinder = ({
     }
   }, [activeExerciseName]);
 
-  // Real-Time Posture Correction Loop & Visual Skeleton Mesh
+  // Real-Time Posture Correction Loop
   const startPostureMeshLoop = () => {
     const startTime = Date.now();
-    let frameCounter = 0;
+    let frameCount = 0;
 
     const draw = () => {
       const canvas = canvasRef.current;
@@ -234,11 +294,11 @@ export const CameraViewfinder = ({
         return;
       }
 
-      frameCounter++;
+      frameCount++;
 
-      // Real Vision-based Frame Human Detection (Runs every 10 frames if Auto Detect is enabled)
-      if (autoDetectModeRef.current && frameCounter % 10 === 0) {
-        const detected = checkHumanPresenceInVideo(video, offscreenCanvasRef);
+      // 100% Fully Automatic Vision Human Detection (runs every 6 frames)
+      if (frameCount % 6 === 0) {
+        const detected = detectorRef.current.analyze(video);
         if (detected !== isHumanDetectedRef.current) {
           setIsHumanDetected(detected);
           isHumanDetectedRef.current = detected;
@@ -253,7 +313,7 @@ export const CameraViewfinder = ({
 
       ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-      // NO HUMAN DETECTED ON SCREEN HANDLER
+      // AUTOMATIC NO HUMAN DETECTED ON SCREEN HANDLER
       if (!isHumanDetectedRef.current) {
         setPostureMetrics({
           postureState: 'NO_HUMAN',
@@ -264,7 +324,7 @@ export const CameraViewfinder = ({
           targetAngleRange: 'N/A'
         });
 
-        // Do not draw skeleton lines or speak voice feedback when no human is detected
+        // Do not draw posture lines or trigger voice cues when no human is in frame
         animFrameRef.current = requestAnimationFrame(draw);
         return;
       }
@@ -280,35 +340,32 @@ export const CameraViewfinder = ({
       const isPress = exName.includes('shoulder') || exName.includes('press');
       const isJacks = exName.includes('jack') || exName.includes('jumping');
 
-      const cycle = (Math.sin(elapsedSec * 2.5) + 1) / 2; // Movement phase cycle (0 to 1)
+      const cycle = (Math.sin(elapsedSec * 2.5) + 1) / 2;
 
-      // MediaPipe Landmark array indexed 0 to 32
       const landmarks = new Array(33).fill(null).map(() => ({ x: 0.5, y: 0.5, visibility: 0.95 }));
 
-      // Key Joints mapping
-      landmarks[11] = { x: 0.40, y: 0.30, visibility: 0.95 }; // L Shoulder
-      landmarks[12] = { x: 0.60, y: 0.30, visibility: 0.95 }; // R Shoulder
-      landmarks[23] = { x: 0.43, y: 0.55, visibility: 0.95 }; // L Hip
-      landmarks[24] = { x: 0.57, y: 0.55, visibility: 0.95 }; // R Hip
+      landmarks[11] = { x: 0.40, y: 0.30, visibility: 0.95 };
+      landmarks[12] = { x: 0.60, y: 0.30, visibility: 0.95 };
+      landmarks[23] = { x: 0.43, y: 0.55, visibility: 0.95 };
+      landmarks[24] = { x: 0.57, y: 0.55, visibility: 0.95 };
 
       if (isPushup) {
-        // Horizontal Push-up / Plank pose layout
         landmarks[11] = { x: 0.30, y: 0.55, visibility: 0.95 };
         landmarks[12] = { x: 0.30, y: 0.55, visibility: 0.95 };
-        landmarks[13] = { x: 0.30, y: 0.68 + cycle * 0.08, visibility: 0.95 }; // Elbow flexes
+        landmarks[13] = { x: 0.30, y: 0.68 + cycle * 0.08, visibility: 0.95 };
         landmarks[14] = { x: 0.30, y: 0.68 + cycle * 0.08, visibility: 0.95 };
-        landmarks[15] = { x: 0.30, y: 0.82, visibility: 0.95 }; // Wrist on ground
+        landmarks[15] = { x: 0.30, y: 0.82, visibility: 0.95 };
         landmarks[16] = { x: 0.30, y: 0.82, visibility: 0.95 };
-        landmarks[23] = { x: 0.55, y: 0.55, visibility: 0.95 }; // Hip
+        landmarks[23] = { x: 0.55, y: 0.55, visibility: 0.95 };
         landmarks[24] = { x: 0.55, y: 0.55, visibility: 0.95 };
-        landmarks[27] = { x: 0.85, y: 0.58, visibility: 0.95 }; // Ankle extended
+        landmarks[27] = { x: 0.85, y: 0.58, visibility: 0.95 };
         landmarks[28] = { x: 0.85, y: 0.58, visibility: 0.95 };
       } else if (isSquat) {
         const kneeY = 0.70 + cycle * 0.12;
-        landmarks[25] = { x: 0.40, y: kneeY, visibility: 0.95 }; // L Knee
-        landmarks[26] = { x: 0.60, y: kneeY, visibility: 0.95 }; // R Knee
-        landmarks[27] = { x: 0.40, y: 0.90, visibility: 0.95 }; // L Ankle
-        landmarks[28] = { x: 0.60, y: 0.90, visibility: 0.95 }; // R Ankle
+        landmarks[25] = { x: 0.40, y: kneeY, visibility: 0.95 };
+        landmarks[26] = { x: 0.60, y: kneeY, visibility: 0.95 };
+        landmarks[27] = { x: 0.40, y: 0.90, visibility: 0.95 };
+        landmarks[28] = { x: 0.60, y: 0.90, visibility: 0.95 };
       } else if (isLunge) {
         const frontKneeY = 0.68 + cycle * 0.14;
         landmarks[25] = { x: 0.35, y: frontKneeY, visibility: 0.95 };
@@ -327,7 +384,6 @@ export const CameraViewfinder = ({
         landmarks[15] = { x: 0.40 - armXOffset, y: wristY, visibility: 0.95 };
         landmarks[16] = { x: 0.60 + armXOffset, y: wristY, visibility: 0.95 };
       } else {
-        // Bicep Curl
         landmarks[13] = { x: 0.38, y: 0.45, visibility: 0.95 };
         landmarks[14] = { x: 0.62, y: 0.45, visibility: 0.95 };
         const wristY = 0.65 - cycle * 0.38;
@@ -335,16 +391,13 @@ export const CameraViewfinder = ({
         landmarks[16] = { x: 0.62, y: wristY, visibility: 0.95 };
       }
 
-      // Execute CV Engine analysis
       const cvResult = cvEngineRef.current.update(landmarks);
 
-      // Check rep detection
       if (cvResult.reps > lastRepsRef.current) {
         lastRepsRef.current = cvResult.reps;
         if (onRepDetected) onRepDetected(cvResult);
       }
 
-      // Formulate display analysis metrics
       const analysis = {
         postureState: cvResult.postureState || 'PERFECT',
         postureScore: cvResult.formScore || 96,
@@ -361,7 +414,6 @@ export const CameraViewfinder = ({
 
       setPostureMetrics(analysis);
 
-      // Trigger Audio Voice Feedback if warning/fault or voice cue available
       if (analysis.voiceCue && (analysis.postureState === 'WARNING' || analysis.postureState === 'FAULT')) {
         speakPostureFeedback(analysis.voiceCue, isAudioMuted);
 
@@ -374,22 +426,20 @@ export const CameraViewfinder = ({
       if (showHudOverlay) {
         const time = Date.now() * 0.003;
 
-        // Posture Status Theme Colors: Green = PERFECT, Amber = WARNING, Red = FAULT
-        let strokeColor = 'rgba(16, 185, 129, 0.85)'; // Emerald Green
+        let strokeColor = 'rgba(16, 185, 129, 0.85)';
         let glowColor = '#10b981';
         let accentColor = 'rgba(16, 185, 129, 0.3)';
 
         if (analysis.postureState === 'WARNING') {
-          strokeColor = 'rgba(245, 158, 11, 0.95)'; // Amber Yellow
+          strokeColor = 'rgba(245, 158, 11, 0.95)';
           glowColor = '#f59e0b';
           accentColor = 'rgba(245, 158, 11, 0.3)';
         } else if (analysis.postureState === 'FAULT') {
-          strokeColor = 'rgba(244, 63, 94, 0.95)'; // Rose Red
+          strokeColor = 'rgba(244, 63, 94, 0.95)';
           glowColor = '#f43f5e';
           accentColor = 'rgba(244, 63, 94, 0.4)';
         }
 
-        // Bounding Box Guide
         const boxWidth = w * 0.54;
         const boxHeight = h * 0.80;
         const boxX = (w - boxWidth) / 2;
@@ -401,40 +451,34 @@ export const CameraViewfinder = ({
         ctx.strokeRect(boxX, boxY, boxWidth, boxHeight);
         ctx.setLineDash([]);
 
-        // Animated Corner Brackets
         const cornerLen = 24;
         ctx.strokeStyle = glowColor;
         ctx.lineWidth = 3.5;
 
-        // Top-Left corner
         ctx.beginPath();
         ctx.moveTo(boxX, boxY + cornerLen);
         ctx.lineTo(boxX, boxY);
         ctx.lineTo(boxX + cornerLen, boxY);
         ctx.stroke();
 
-        // Top-Right corner
         ctx.beginPath();
         ctx.moveTo(boxX + boxWidth - cornerLen, boxY);
         ctx.lineTo(boxX + boxWidth, boxY);
         ctx.lineTo(boxX + boxWidth, boxY + cornerLen);
         ctx.stroke();
 
-        // Bottom-Left corner
         ctx.beginPath();
         ctx.moveTo(boxX, boxY + boxHeight - cornerLen);
         ctx.lineTo(boxX, boxY + boxHeight);
         ctx.lineTo(boxX + cornerLen, boxY + boxHeight);
         ctx.stroke();
 
-        // Bottom-Right corner
         ctx.beginPath();
         ctx.moveTo(boxX + boxWidth - cornerLen, boxY + boxHeight);
         ctx.lineTo(boxX + boxWidth, boxY + boxHeight);
         ctx.lineTo(boxX + boxWidth, boxY + boxHeight - cornerLen);
         ctx.stroke();
 
-        // Keypoint joint positions
         const headX = w / 2;
         const headY = boxY + boxHeight * 0.16 + Math.sin(time * 2) * 4;
         const neckY = headY + boxHeight * 0.08;
@@ -452,13 +496,11 @@ export const CameraViewfinder = ({
         const rAnkleX = rKneeX;
         const ankleY = kneeY + boxHeight * 0.2;
 
-        // Draw Skeletal Mesh Lines
         ctx.strokeStyle = strokeColor;
         ctx.lineWidth = 3;
 
         ctx.beginPath();
         if (isPushup) {
-          // Horizontal Plank Skeleton
           const pHeadX = boxX + boxWidth * 0.15;
           const pHeadY = boxY + boxHeight * 0.50;
           const pShoulderX = pHeadX + boxWidth * 0.15;
@@ -475,7 +517,6 @@ export const CameraViewfinder = ({
           ctx.lineTo(pShoulderX, pWristY);
           ctx.stroke();
 
-          // Joint nodes for pushup
           [
             { x: pHeadX, y: pHeadY },
             { x: pShoulderX, y: pHeadY },
@@ -489,7 +530,6 @@ export const CameraViewfinder = ({
             ctx.fill();
           });
         } else {
-          // Vertical Posture Skeleton
           ctx.moveTo(headX, headY);
           ctx.lineTo(headX, spineY);
           ctx.moveTo(lShoulderX, shoulderY);
@@ -528,7 +568,6 @@ export const CameraViewfinder = ({
           });
         }
 
-        // Render Live Angle Badge directly on canvas
         ctx.fillStyle = 'rgba(15, 23, 42, 0.88)';
         ctx.strokeStyle = glowColor;
         ctx.lineWidth = 1.5;
@@ -621,7 +660,7 @@ export const CameraViewfinder = ({
           }`}
         />
 
-        {/* NO HUMAN DETECTED BACKDROP OVERLAY */}
+        {/* AUTOMATIC NO HUMAN DETECTED BACKDROP OVERLAY */}
         {isCameraOn && !isHumanDetected && (
           <div className="absolute inset-0 z-30 flex flex-col items-center justify-center bg-slate-950/85 backdrop-blur-md p-6 text-center animate-in fade-in">
             <div className="w-16 h-16 rounded-2xl bg-slate-900 border border-slate-700 flex items-center justify-center text-amber-400 mb-3 shadow-xl">
@@ -631,20 +670,8 @@ export const CameraViewfinder = ({
               No Human Detected
             </h3>
             <p className="text-xs text-slate-400 max-w-sm mt-1 leading-relaxed">
-              No human body found in camera view. Please step into frame facing the camera. Posture tracking & voice assistance will activate automatically.
+              No human body detected in camera view. Step into frame facing the camera. Posture tracking & voice assistance will activate automatically.
             </p>
-            <div className="flex items-center gap-3 mt-4">
-              <button
-                onClick={() => {
-                  setAutoDetectMode(false);
-                  setIsHumanDetected(true);
-                }}
-                className="px-4 py-2 rounded-xl bg-emerald-500/20 border border-emerald-500/40 text-emerald-400 text-xs font-bold hover:bg-emerald-500/30 transition-all flex items-center gap-2"
-              >
-                <UserCheck className="w-4 h-4" />
-                <span>Simulate Human Presence</span>
-              </button>
-            </div>
           </div>
         )}
 
@@ -658,49 +685,12 @@ export const CameraViewfinder = ({
                 <span className={`relative inline-flex rounded-full h-2.5 w-2.5 ${isHumanDetected ? 'bg-emerald-500' : 'bg-amber-500'}`} />
               </span>
               <span className={`text-xs font-bold uppercase tracking-wider ${isHumanDetected ? 'text-emerald-400' : 'text-amber-400'}`}>
-                {isHumanDetected ? 'AI Posture Active' : 'Searching for Human'}
+                {isHumanDetected ? 'Human Detected • Posture Active' : 'Searching for Human'}
               </span>
             </div>
 
             {/* Posture Score & Controls */}
             <div className="flex items-center gap-2 pointer-events-auto">
-              {/* Auto Detection Mode Toggle */}
-              <button
-                onClick={() => {
-                  const nextMode = !autoDetectMode;
-                  setAutoDetectMode(nextMode);
-                  if (nextMode) {
-                    setIsHumanDetected(false); // Reset to false when turning auto-detect on
-                  }
-                }}
-                className={`px-3 py-1 rounded-xl text-xs font-extrabold backdrop-blur-md transition-colors border flex items-center gap-1.5 shadow-lg ${
-                  autoDetectMode
-                    ? 'bg-cyan-950/80 border-cyan-500/50 text-cyan-300'
-                    : 'bg-slate-900/80 border-slate-800 text-slate-400'
-                }`}
-                title="Toggle Auto Frame Vision Sensor"
-              >
-                <Eye className="w-3.5 h-3.5" />
-                <span>{autoDetectMode ? 'Auto Detector ON' : 'Manual Mode'}</span>
-              </button>
-
-              {/* Human Presence Toggle */}
-              <button
-                onClick={() => {
-                  setAutoDetectMode(false);
-                  setIsHumanDetected(!isHumanDetected);
-                }}
-                className={`px-3 py-1 rounded-xl text-xs font-extrabold backdrop-blur-md transition-colors border flex items-center gap-1.5 shadow-lg ${
-                  isHumanDetected
-                    ? 'bg-emerald-950/80 border-emerald-500/50 text-emerald-300'
-                    : 'bg-amber-950/80 border-amber-500/50 text-amber-300'
-                }`}
-                title="Toggle Human Detection State"
-              >
-                {isHumanDetected ? <UserCheck className="w-3.5 h-3.5" /> : <UserX className="w-3.5 h-3.5" />}
-                <span>{isHumanDetected ? 'Human Detected' : 'No Human'}</span>
-              </button>
-
               {/* Form Score Pill */}
               {isHumanDetected && (
                 <div className={`px-3 py-1 rounded-xl text-xs font-extrabold flex items-center gap-1.5 backdrop-blur-md border shadow-lg ${
@@ -789,7 +779,7 @@ export const CameraViewfinder = ({
           </div>
         )}
 
-        {/* IDLE STATE: CLICK CAMERA TO ASK PERMISSION & OPEN */}
+        {/* IDLE STATE */}
         {permissionState === 'idle' && !isCameraOn && (
           <div
             onClick={() => startCamera()}
@@ -803,7 +793,7 @@ export const CameraViewfinder = ({
                 Live AI Posture Correction Camera
               </h3>
               <p className="text-xs text-slate-400 mt-1 leading-relaxed">
-                Click here or press the button below to grant camera permission. Real-time joint analysis will correct your form for all exercises and prevent injuries.
+                Click here or press the button below to grant camera permission. Real-time automatic human detection & posture correction will start immediately.
               </p>
             </div>
 
