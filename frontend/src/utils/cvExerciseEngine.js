@@ -693,6 +693,116 @@ export class JumpingJackAnalyzer {
 }
 
 // ============================================================
+// DUMBBELL ROW ANALYZER
+// ============================================================
+
+export class DumbbellRowAnalyzer {
+  constructor() {
+    this.reps = 0;
+    this.stage = 'down';
+    this.angleSmoother = new AngleSmoother(0.35);
+    this.activeArm = 'Right';
+  }
+
+  update(landmarks) {
+    if (!landmarks || landmarks.length < 25) {
+      return this.getFallbackData();
+    }
+
+    const LEFT_SHOULDER = 11, LEFT_ELBOW = 13, LEFT_WRIST = 15, LEFT_HIP = 23;
+    const RIGHT_SHOULDER = 12, RIGHT_ELBOW = 14, RIGHT_WRIST = 16, RIGHT_HIP = 24;
+
+    const leftShoulder = landmarks[LEFT_SHOULDER] || { x: 0.35, y: 0.3, visibility: 0.9 };
+    const leftElbow = landmarks[LEFT_ELBOW] || { x: 0.35, y: 0.5, visibility: 0.9 };
+    const leftWrist = landmarks[LEFT_WRIST] || { x: 0.35, y: 0.7, visibility: 0.9 };
+    const leftHip = landmarks[LEFT_HIP] || { x: 0.38, y: 0.6, visibility: 0.9 };
+
+    const rightShoulder = landmarks[RIGHT_SHOULDER] || { x: 0.65, y: 0.3, visibility: 0.9 };
+    const rightElbow = landmarks[RIGHT_ELBOW] || { x: 0.65, y: 0.5, visibility: 0.9 };
+    const rightWrist = landmarks[RIGHT_WRIST] || { x: 0.65, y: 0.7, visibility: 0.9 };
+    const rightHip = landmarks[RIGHT_HIP] || { x: 0.62, y: 0.6, visibility: 0.9 };
+
+    const leftVis = (leftShoulder.visibility || 0.5) + (leftElbow.visibility || 0.5) + (leftWrist.visibility || 0.5);
+    const rightVis = (rightShoulder.visibility || 0.5) + (rightElbow.visibility || 0.5) + (rightWrist.visibility || 0.5);
+
+    let shoulder, elbow, wrist, hip;
+    if (rightVis >= leftVis) {
+      this.activeArm = 'Right';
+      shoulder = rightShoulder;
+      elbow = rightElbow;
+      wrist = rightWrist;
+      hip = rightHip;
+    } else {
+      this.activeArm = 'Left';
+      shoulder = leftShoulder;
+      elbow = leftElbow;
+      wrist = leftWrist;
+      hip = leftHip;
+    }
+
+    const rawElbowAngle = calculateAngle(shoulder, elbow, wrist);
+    const elbowAngle = this.angleSmoother.update(rawElbowAngle);
+    const torsoHingeAngle = calculateAngle(shoulder, hip, { x: hip.x, y: hip.y + 0.5 });
+
+    let repIncremented = false;
+
+    if (elbowAngle > 140) {
+      this.stage = 'down';
+    }
+    if (elbowAngle < 90 && this.stage === 'down') {
+      this.stage = 'up';
+      this.reps++;
+      repIncremented = true;
+    }
+
+    let postureState = 'PERFECT';
+    let formScore = 96;
+    let feedback = 'Good dumbbell row form! Drive elbow up towards hip.';
+    let voiceCue = '';
+
+    if (torsoHingeAngle > 60) {
+      postureState = 'WARNING';
+      formScore = 80;
+      feedback = 'Hinge forward more at hips to isolate lats and back';
+      voiceCue = 'Hinge forward at hips!';
+    } else if (elbowAngle < 85 && this.stage === 'up') {
+      postureState = 'PERFECT';
+      formScore = 98;
+      feedback = 'Peak lat contraction achieved!';
+      voiceCue = 'Squeeze at top!';
+    }
+
+    return {
+      exercise: 'Dumbbell Rows',
+      angle: Math.round(elbowAngle * 10) / 10,
+      reps: this.reps,
+      stage: this.stage,
+      feedback,
+      voiceCue: repIncremented ? 'Good row!' : voiceCue,
+      formScore,
+      postureState,
+      keyAngleName: 'Elbow Row Angle',
+      targetRange: '60° - 160°'
+    };
+  }
+
+  getFallbackData() {
+    return {
+      exercise: 'Dumbbell Rows',
+      angle: 87,
+      reps: this.reps,
+      stage: this.stage,
+      feedback: 'Maintain neutral spine and pull dumbbell towards hip',
+      voiceCue: '',
+      formScore: 95,
+      postureState: 'PERFECT',
+      keyAngleName: 'Elbow Row Angle',
+      targetRange: '60° - 160°'
+    };
+  }
+}
+
+// ============================================================
 // UNIVERSAL EXERCISE ENGINE WRAPPER
 // ============================================================
 
@@ -704,7 +814,10 @@ export class CVExerciseEngine {
   setExercise(exercise) {
     const ex = (exercise || 'bicep').toLowerCase().trim();
 
-    if (ex.includes('push') || ex.includes('press-up')) {
+    if (ex.includes('row') || ex.includes('dumbbell')) {
+      this.exerciseName = 'dumbbell_rows';
+      this.analyzer = new DumbbellRowAnalyzer();
+    } else if (ex.includes('push') || ex.includes('press-up')) {
       this.exerciseName = 'pushup';
       this.analyzer = new PushupAnalyzer();
     } else if (ex.includes('squat') || ex.includes('leg')) {

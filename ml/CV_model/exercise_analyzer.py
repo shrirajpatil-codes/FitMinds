@@ -208,6 +208,54 @@ class PushupAnalyzer:
         }
 
 # ============================================================
+# DUMBBELL ROW ANALYZER
+# ============================================================
+
+class DumbbellRowAnalyzer:
+    def __init__(self):
+        self.reps = 0
+        self.stage = "down"
+        self.angle_smoother = AngleSmoother(alpha=0.35)
+
+    def update(self, landmarks):
+        LEFT_SHOULDER, LEFT_ELBOW, LEFT_WRIST, LEFT_HIP = 11, 13, 15, 23
+        RIGHT_SHOULDER, RIGHT_ELBOW, RIGHT_WRIST, RIGHT_HIP = 12, 14, 16, 24
+
+        left_shoulder, left_elbow, left_wrist, left_hip = landmarks[LEFT_SHOULDER], landmarks[LEFT_ELBOW], landmarks[LEFT_WRIST], landmarks[LEFT_HIP]
+        right_shoulder, right_elbow, right_wrist, right_hip = landmarks[RIGHT_SHOULDER], landmarks[RIGHT_ELBOW], landmarks[RIGHT_WRIST], landmarks[RIGHT_HIP]
+
+        left_vis = getattr(left_shoulder, 'visibility', 0.9) + getattr(left_elbow, 'visibility', 0.9) + getattr(left_wrist, 'visibility', 0.9)
+        right_vis = getattr(right_shoulder, 'visibility', 0.9) + getattr(right_elbow, 'visibility', 0.9) + getattr(right_wrist, 'visibility', 0.9)
+
+        if right_vis >= left_vis:
+            shoulder, elbow, wrist, hip = right_shoulder, right_elbow, right_wrist, right_hip
+        else:
+            shoulder, elbow, wrist, hip = left_shoulder, left_elbow, left_wrist, left_hip
+
+        raw_elbow_angle = calculate_angle([shoulder.x, shoulder.y], [elbow.x, elbow.y], [wrist.x, wrist.y])
+        elbow_angle = self.angle_smoother.update(raw_elbow_angle)
+
+        if elbow_angle > 140:
+            self.stage = "down"
+
+        if elbow_angle < 90 and self.stage == "down":
+            self.stage = "up"
+            self.reps += 1
+
+        if elbow_angle < 85:
+            feedback = "Peak lat contraction! Great row form."
+        else:
+            feedback = "Pull dumbbell towards hip with neutral back"
+
+        return {
+            "exercise": "Dumbbell Rows",
+            "elbow_angle": round(elbow_angle, 2),
+            "reps": self.reps,
+            "stage": self.stage,
+            "feedback": feedback
+        }
+
+# ============================================================
 # EXERCISE ENGINE
 # ============================================================
 
@@ -218,7 +266,10 @@ class ExerciseEngine:
     def set_exercise(self, exercise):
         exercise = exercise.lower().strip()
 
-        if exercise in ["bicep", "bicep curl", "curl"]:
+        if exercise in ["row", "dumbbell rows", "rows"]:
+            self.exercise = "dumbbell_rows"
+            self.analyzer = DumbbellRowAnalyzer()
+        elif exercise in ["bicep", "bicep curl", "curl"]:
             self.exercise = "bicep"
             self.analyzer = BicepCurlAnalyzer()
         elif exercise in ["squat", "squats"]:

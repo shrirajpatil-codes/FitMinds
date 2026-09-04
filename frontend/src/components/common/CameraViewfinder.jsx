@@ -664,6 +664,16 @@ export const CameraViewfinder = ({
           ctx.fill();
         });
 
+        // Render Direct Vertex Angle Text (e.g. 87°) at the active Elbow Joint (matching user screenshot style)
+        const activeElbow = rElbow.x > lElbow.x ? rElbow : lElbow;
+        ctx.fillStyle = '#ffffff';
+        ctx.strokeStyle = 'rgba(0,0,0,0.85)';
+        ctx.lineWidth = 5;
+        ctx.font = 'bold 36px Inter, sans-serif';
+        ctx.textAlign = 'left';
+        ctx.strokeText(`${analysis.keyAngle}°`, activeElbow.x + 16, activeElbow.y + 12);
+        ctx.fillText(`${analysis.keyAngle}°`, activeElbow.x + 16, activeElbow.y + 12);
+
         // Render Dynamic Joint Angle Badge above human head
         ctx.fillStyle = 'rgba(15, 23, 42, 0.90)';
         ctx.strokeStyle = glowColor;

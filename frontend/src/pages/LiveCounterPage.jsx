@@ -76,6 +76,7 @@ export const LiveCounterPage = () => {
               <option value="Push-up">Push-ups</option>
               <option value="Squat">Squats</option>
               <option value="Bicep Curl">Bicep Curl</option>
+              <option value="Dumbbell Rows">Dumbbell Rows</option>
               <option value="Lunge">Lunges</option>
               <option value="Plank">Plank</option>
               <option value="Shoulder Press">Shoulder Press</option>

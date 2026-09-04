@@ -167,6 +167,22 @@ export const analyzeExercisePosture = (exerciseName = '', joints = {}, timeSec =
       feedbackMessage = 'Keep core tight and push overhead.';
       voiceCue = 'Push up overhead!';
     }
+  } else if (ex.includes('row') || ex.includes('dumbbell')) {
+    angleName = 'Elbow Row Angle';
+    targetAngleRange = '60° - 160°';
+    keyAngle = Math.round(160 - cycle * 95);
+
+    if (keyAngle < 85) {
+      postureState = 'PERFECT';
+      postureScore = 98;
+      feedbackMessage = 'Peak lat contraction! Squeeze dumbbell towards hip.';
+      voiceCue = 'Great lat squeeze!';
+    } else if (cycle > 0.6) {
+      postureState = 'WARNING';
+      postureScore = 78;
+      feedbackMessage = 'Pull elbow back higher towards hip for full contraction.';
+      voiceCue = 'Pull elbow higher towards hip!';
+    }
   } else if (ex.includes('jack') || ex.includes('jumping')) {
     angleName = 'Arm Elevation';
     targetAngleRange = '30° - 140°';
