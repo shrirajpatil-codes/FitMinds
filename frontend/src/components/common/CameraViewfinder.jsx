@@ -13,11 +13,60 @@ import {
   Activity,
   AlertTriangle,
   UserCheck,
-  UserX
+  UserX,
+  Eye
 } from 'lucide-react';
 import { Button } from './Button';
 import { analyzeExercisePosture, speakPostureFeedback } from '../../utils/postureAnalyzer';
 import { CVExerciseEngine } from '../../utils/cvExerciseEngine';
+
+/**
+ * Real-time vision-based Human Detection algorithm
+ * Samples live camera video frame pixels for human skin tone & body presence
+ */
+const checkHumanPresenceInVideo = (videoElement, canvasRef) => {
+  if (!videoElement || videoElement.videoWidth === 0 || videoElement.videoHeight === 0) {
+    return false;
+  }
+
+  try {
+    const width = 100;
+    const height = 75;
+    if (!canvasRef.current) {
+      canvasRef.current = document.createElement('canvas');
+      canvasRef.current.width = width;
+      canvasRef.current.height = height;
+    }
+    const canvas = canvasRef.current;
+    const ctx = canvas.getContext('2d', { willReadFrequently: true });
+    if (!ctx) return false;
+
+    ctx.drawImage(videoElement, 0, 0, width, height);
+    const frameData = ctx.getImageData(0, 0, width, height).data;
+
+    let skinPixelCount = 0;
+    let totalSamples = 0;
+
+    for (let i = 0; i < frameData.length; i += 16) {
+      const r = frameData[i];
+      const g = frameData[i + 1];
+      const b = frameData[i + 2];
+      totalSamples++;
+
+      // Human skin tone / facial color bounds in RGB
+      if (r > 60 && g > 35 && b > 20 && (r - g > 10) && (r - b > 10)) {
+        skinPixelCount++;
+      }
+    }
+
+    const ratio = skinPixelCount / totalSamples;
+    // Human is considered present if skin/body pixels account for at least 3.5% of frame area
+    return ratio >= 0.035;
+  } catch (err) {
+    console.warn('Human presence detection error:', err);
+    return false;
+  }
+};
 
 export const CameraViewfinder = ({
   onRepDetected,
@@ -30,6 +79,7 @@ export const CameraViewfinder = ({
   const canvasRef = useRef(null);
   const streamRef = useRef(null);
   const animFrameRef = useRef(null);
+  const offscreenCanvasRef = useRef(null);
 
   const [permissionState, setPermissionState] = useState('idle'); // 'idle' | 'requesting' | 'granted' | 'denied' | 'error'
   const [errorMessage, setErrorMessage] = useState('');
@@ -43,17 +93,18 @@ export const CameraViewfinder = ({
   const [isAudioMuted, setIsAudioMuted] = useState(false);
   const [isFlashActive, setIsFlashActive] = useState(false);
 
-  // Human Detection State (default true when camera is active, toggleable)
-  const [isHumanDetected, setIsHumanDetected] = useState(true);
+  // Human Detection State (default FALSE when camera starts, verified via frame detection or manual toggle)
+  const [isHumanDetected, setIsHumanDetected] = useState(false);
+  const [autoDetectMode, setAutoDetectMode] = useState(true);
 
   // Live Posture Engine State
   const [postureMetrics, setPostureMetrics] = useState({
-    postureState: 'PERFECT',
-    postureScore: 96,
-    feedbackMessage: 'Form is optimal. Maintain spine alignment.',
-    keyAngle: 175,
-    angleName: 'Spine Angle',
-    targetAngleRange: '165° - 180°'
+    postureState: 'NO_HUMAN',
+    postureScore: 0,
+    feedbackMessage: 'No human detected on screen. Please enter camera view.',
+    keyAngle: 0,
+    angleName: 'Posture Angle',
+    targetAngleRange: 'N/A'
   });
 
   const [formLog, setFormLog] = useState([]);
@@ -93,6 +144,7 @@ export const CameraViewfinder = ({
       videoRef.current.srcObject = null;
     }
     setIsCameraOn(false);
+    setIsHumanDetected(false);
   };
 
   const startCamera = async (deviceIdOverride, facingModeOverride) => {
@@ -153,10 +205,15 @@ export const CameraViewfinder = ({
   const cvEngineRef = useRef(new CVExerciseEngine(activeExerciseName));
   const lastRepsRef = useRef(0);
   const isHumanDetectedRef = useRef(isHumanDetected);
+  const autoDetectModeRef = useRef(autoDetectMode);
 
   useEffect(() => {
     isHumanDetectedRef.current = isHumanDetected;
   }, [isHumanDetected]);
+
+  useEffect(() => {
+    autoDetectModeRef.current = autoDetectMode;
+  }, [autoDetectMode]);
 
   useEffect(() => {
     if (cvEngineRef.current) {
@@ -167,6 +224,7 @@ export const CameraViewfinder = ({
   // Real-Time Posture Correction Loop & Visual Skeleton Mesh
   const startPostureMeshLoop = () => {
     const startTime = Date.now();
+    let frameCounter = 0;
 
     const draw = () => {
       const canvas = canvasRef.current;
@@ -174,6 +232,17 @@ export const CameraViewfinder = ({
       if (!canvas || !video || video.paused || video.ended) {
         animFrameRef.current = requestAnimationFrame(draw);
         return;
+      }
+
+      frameCounter++;
+
+      // Real Vision-based Frame Human Detection (Runs every 10 frames if Auto Detect is enabled)
+      if (autoDetectModeRef.current && frameCounter % 10 === 0) {
+        const detected = checkHumanPresenceInVideo(video, offscreenCanvasRef);
+        if (detected !== isHumanDetectedRef.current) {
+          setIsHumanDetected(detected);
+          isHumanDetectedRef.current = detected;
+        }
       }
 
       const ctx = canvas.getContext('2d');
@@ -189,7 +258,7 @@ export const CameraViewfinder = ({
         setPostureMetrics({
           postureState: 'NO_HUMAN',
           postureScore: 0,
-          feedbackMessage: 'No human detected on screen. Please enter camera view.',
+          feedbackMessage: 'No human detected on screen. Step into camera view facing the screen.',
           keyAngle: 0,
           angleName: 'Posture Angle',
           targetAngleRange: 'N/A'
@@ -554,7 +623,7 @@ export const CameraViewfinder = ({
 
         {/* NO HUMAN DETECTED BACKDROP OVERLAY */}
         {isCameraOn && !isHumanDetected && (
-          <div className="absolute inset-0 z-30 flex flex-col items-center justify-center bg-slate-950/80 backdrop-blur-md p-6 text-center animate-in fade-in">
+          <div className="absolute inset-0 z-30 flex flex-col items-center justify-center bg-slate-950/85 backdrop-blur-md p-6 text-center animate-in fade-in">
             <div className="w-16 h-16 rounded-2xl bg-slate-900 border border-slate-700 flex items-center justify-center text-amber-400 mb-3 shadow-xl">
               <UserX className="w-8 h-8 animate-pulse" />
             </div>
@@ -562,15 +631,20 @@ export const CameraViewfinder = ({
               No Human Detected
             </h3>
             <p className="text-xs text-slate-400 max-w-sm mt-1 leading-relaxed">
-              Please step into the camera view facing the screen. Real-time posture lines, joint angle measurements, and voice assistance will activate automatically.
+              No human body found in camera view. Please step into frame facing the camera. Posture tracking & voice assistance will activate automatically.
             </p>
-            <button
-              onClick={() => setIsHumanDetected(true)}
-              className="mt-4 px-4 py-2 rounded-xl bg-emerald-500/20 border border-emerald-500/40 text-emerald-400 text-xs font-bold hover:bg-emerald-500/30 transition-all flex items-center gap-2"
-            >
-              <UserCheck className="w-4 h-4" />
-              <span>Human Entered Screen (Activate Tracking)</span>
-            </button>
+            <div className="flex items-center gap-3 mt-4">
+              <button
+                onClick={() => {
+                  setAutoDetectMode(false);
+                  setIsHumanDetected(true);
+                }}
+                className="px-4 py-2 rounded-xl bg-emerald-500/20 border border-emerald-500/40 text-emerald-400 text-xs font-bold hover:bg-emerald-500/30 transition-all flex items-center gap-2"
+              >
+                <UserCheck className="w-4 h-4" />
+                <span>Simulate Human Presence</span>
+              </button>
+            </div>
           </div>
         )}
 
@@ -590,9 +664,32 @@ export const CameraViewfinder = ({
 
             {/* Posture Score & Controls */}
             <div className="flex items-center gap-2 pointer-events-auto">
+              {/* Auto Detection Mode Toggle */}
+              <button
+                onClick={() => {
+                  const nextMode = !autoDetectMode;
+                  setAutoDetectMode(nextMode);
+                  if (nextMode) {
+                    setIsHumanDetected(false); // Reset to false when turning auto-detect on
+                  }
+                }}
+                className={`px-3 py-1 rounded-xl text-xs font-extrabold backdrop-blur-md transition-colors border flex items-center gap-1.5 shadow-lg ${
+                  autoDetectMode
+                    ? 'bg-cyan-950/80 border-cyan-500/50 text-cyan-300'
+                    : 'bg-slate-900/80 border-slate-800 text-slate-400'
+                }`}
+                title="Toggle Auto Frame Vision Sensor"
+              >
+                <Eye className="w-3.5 h-3.5" />
+                <span>{autoDetectMode ? 'Auto Detector ON' : 'Manual Mode'}</span>
+              </button>
+
               {/* Human Presence Toggle */}
               <button
-                onClick={() => setIsHumanDetected(!isHumanDetected)}
+                onClick={() => {
+                  setAutoDetectMode(false);
+                  setIsHumanDetected(!isHumanDetected);
+                }}
                 className={`px-3 py-1 rounded-xl text-xs font-extrabold backdrop-blur-md transition-colors border flex items-center gap-1.5 shadow-lg ${
                   isHumanDetected
                     ? 'bg-emerald-950/80 border-emerald-500/50 text-emerald-300'
