@@ -81,33 +81,45 @@ export const TodayPlanPage = () => {
           Workout Structure ({currentPlan.exercises.length} Exercises)
         </h3>
 
-        {currentPlan.exercises.map((ex, idx) => (
-          <Card key={ex.id} variant="default" className="p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-4 hover:border-slate-700 transition-colors">
-            <div className="flex items-start gap-3">
-              <div className="w-8 h-8 rounded-xl bg-slate-800 border border-slate-700 flex items-center justify-center font-bold text-slate-300 text-xs shrink-0 mt-0.5">
-                {idx + 1}
-              </div>
-              <div>
-                <h4 className="text-sm font-semibold text-slate-100">{ex.name}</h4>
-                <p className="text-xs text-slate-400 mt-0.5">{ex.instructions}</p>
-                <div className="flex items-center gap-3 mt-2 text-[11px] text-slate-400">
-                  <span className="bg-slate-900 px-2 py-0.5 rounded border border-slate-800 text-slate-300 font-medium">
-                    {ex.sets} Sets
-                  </span>
-                  <span className="bg-slate-900 px-2 py-0.5 rounded border border-slate-800 text-slate-300 font-medium">
-                    {ex.reps}
-                  </span>
-                  <span>Rest: {ex.restSeconds}s</span>
+        {currentPlan.exercises.map((ex, idx) => {
+          const isBicepCompulsory = ex.isCompulsory || ex.name.toLowerCase().includes('bicep');
+          return (
+            <Card key={ex.id || idx} variant={isBicepCompulsory ? "highlighted" : "default"} className="p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-4 hover:border-slate-700 transition-colors">
+              <div className="flex items-start gap-3">
+                <div className={`w-8 h-8 rounded-xl border flex items-center justify-center font-bold text-xs shrink-0 mt-0.5 ${
+                  isBicepCompulsory ? 'bg-brand/20 border-brand text-brand' : 'bg-slate-800 border-slate-700 text-slate-300'
+                }`}>
+                  {idx + 1}
+                </div>
+                <div>
+                  <div className="flex flex-wrap items-center gap-2">
+                    <h4 className="text-sm font-bold text-slate-100">{ex.name}</h4>
+                    {isBicepCompulsory && (
+                      <Badge variant="brand" size="sm">
+                        COMPULSORY EXERCISE
+                      </Badge>
+                    )}
+                  </div>
+                  <p className="text-xs text-slate-400 mt-1">{ex.instructions}</p>
+                  <div className="flex items-center gap-3 mt-2 text-[11px] text-slate-400">
+                    <span className="bg-slate-900 px-2 py-0.5 rounded border border-slate-800 text-slate-300 font-medium">
+                      {ex.sets} Sets
+                    </span>
+                    <span className="bg-slate-900 px-2 py-0.5 rounded border border-slate-800 text-slate-300 font-medium">
+                      {typeof ex.reps === 'number' ? `${ex.reps} Reps` : ex.reps}
+                    </span>
+                    <span>Rest: {ex.restSeconds}s</span>
+                  </div>
                 </div>
               </div>
-            </div>
 
-            <div className="flex items-center justify-between sm:justify-end gap-3 text-xs text-slate-400 shrink-0 border-t sm:border-t-0 pt-2 sm:pt-0 border-slate-800">
-              <span className="font-semibold text-slate-300">{ex.duration}</span>
-              <ChevronRight className="w-4 h-4 text-slate-600" />
-            </div>
-          </Card>
-        ))}
+              <div className="flex items-center justify-between sm:justify-end gap-3 text-xs text-slate-400 shrink-0 border-t sm:border-t-0 pt-2 sm:pt-0 border-slate-800">
+                <span className="font-semibold text-slate-300">{ex.duration}</span>
+                <ChevronRight className="w-4 h-4 text-slate-600" />
+              </div>
+            </Card>
+          );
+        })}
       </div>
 
       {/* Bottom Start Action */}

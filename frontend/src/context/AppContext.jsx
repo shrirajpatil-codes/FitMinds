@@ -335,27 +335,30 @@ export const AppProvider = ({ children }) => {
   };
 
   // Method to adjust plan manually
-  const applyPlanAdjustment = (actionType) => {
-    if (actionType === 'less_time') {
+  const applyPlanAdjustment = (presetParam) => {
+    let preset = presetParam;
+    if (typeof presetParam === 'string') {
+      const presetMap = {
+        'less_time': 'adj_time',
+        'lower_intensity': 'adj_energy',
+        'change_focus': 'adj_academic'
+      };
+      const presetId = presetMap[presetParam] || presetParam;
+      preset = workoutAdjustmentPresets.find(p => p.id === presetId) || workoutAdjustmentPresets[0];
+    }
+
+    if (preset) {
       setCurrentPlan(prev => ({
         ...prev,
-        title: 'Express 12-Min Burn',
-        durationMinutes: 12,
+        title: preset.title || prev.title,
+        durationMinutes: preset.reducedDuration || prev.durationMinutes,
+        targetFocus: preset.targetFocus || prev.targetFocus,
+        exercises: preset.exercises && preset.exercises.length > 0 ? preset.exercises : prev.exercises,
         source: 'ADAPTED'
       }));
-    } else if (actionType === 'lower_intensity') {
-      setCurrentPlan(prev => ({
-        ...prev,
-        title: 'Active Mobility & Recovery',
-        difficulty: 'Easy',
-        source: 'ADAPTED'
-      }));
-    } else if (actionType === 'change_focus') {
-      setCurrentPlan(prev => ({
-        ...prev,
-        title: 'Upper Body & Core Focus',
-        source: 'USER_MODIFIED'
-      }));
+      setActiveExerciseIndex(0);
+      setActiveSet(1);
+      setCompletedExerciseIds([]);
     }
   };
 
