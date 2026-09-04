@@ -12,10 +12,10 @@ import {
   VolumeX,
   Activity,
   AlertTriangle,
-  Info
+  UserCheck,
+  UserX
 } from 'lucide-react';
 import { Button } from './Button';
-import { Badge } from './Badge';
 import { analyzeExercisePosture, speakPostureFeedback } from '../../utils/postureAnalyzer';
 import { CVExerciseEngine } from '../../utils/cvExerciseEngine';
 
@@ -34,7 +34,7 @@ export const CameraViewfinder = ({
   const [permissionState, setPermissionState] = useState('idle'); // 'idle' | 'requesting' | 'granted' | 'denied' | 'error'
   const [errorMessage, setErrorMessage] = useState('');
   const [isCameraOn, setIsCameraOn] = useState(false);
-  const [facingMode, setFacingMode] = useState('user'); // 'user' | 'environment'
+  const [facingMode, setFacingMode] = useState('user');
   const [availableDevices, setAvailableDevices] = useState([]);
   const [selectedDeviceId, setSelectedDeviceId] = useState('');
   const [capturedPhoto, setCapturedPhoto] = useState(null);
@@ -42,6 +42,9 @@ export const CameraViewfinder = ({
   const [showHudOverlay, setShowHudOverlay] = useState(true);
   const [isAudioMuted, setIsAudioMuted] = useState(false);
   const [isFlashActive, setIsFlashActive] = useState(false);
+
+  // Human Detection State (default true when camera is active, toggleable)
+  const [isHumanDetected, setIsHumanDetected] = useState(true);
 
   // Live Posture Engine State
   const [postureMetrics, setPostureMetrics] = useState({
@@ -149,6 +152,11 @@ export const CameraViewfinder = ({
   // CV Exercise Engine Instance Ref
   const cvEngineRef = useRef(new CVExerciseEngine(activeExerciseName));
   const lastRepsRef = useRef(0);
+  const isHumanDetectedRef = useRef(isHumanDetected);
+
+  useEffect(() => {
+    isHumanDetectedRef.current = isHumanDetected;
+  }, [isHumanDetected]);
 
   useEffect(() => {
     if (cvEngineRef.current) {
@@ -168,37 +176,94 @@ export const CameraViewfinder = ({
         return;
       }
 
-      const elapsedSec = (Date.now() - startTime) / 1000;
-      const w = canvas.width || 640;
-      const h = canvas.height || 480;
+      const ctx = canvas.getContext('2d');
+      if (canvas.width !== video.videoWidth || canvas.height !== video.videoHeight) {
+        canvas.width = video.videoWidth || 640;
+        canvas.height = video.videoHeight || 480;
+      }
 
-      // Generate 33-landmark pose structure (simulated stream/camera movement coordinates)
-      const isSquat = activeExerciseName.toLowerCase().includes('squat');
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+      // NO HUMAN DETECTED ON SCREEN HANDLER
+      if (!isHumanDetectedRef.current) {
+        setPostureMetrics({
+          postureState: 'NO_HUMAN',
+          postureScore: 0,
+          feedbackMessage: 'No human detected on screen. Please enter camera view.',
+          keyAngle: 0,
+          angleName: 'Posture Angle',
+          targetAngleRange: 'N/A'
+        });
+
+        // Do not draw skeleton lines or speak voice feedback when no human is detected
+        animFrameRef.current = requestAnimationFrame(draw);
+        return;
+      }
+
+      const elapsedSec = (Date.now() - startTime) / 1000;
+      const w = canvas.width;
+      const h = canvas.height;
+
+      const exName = (activeExerciseName || '').toLowerCase();
+      const isSquat = exName.includes('squat');
+      const isPushup = exName.includes('push') || exName.includes('plank');
+      const isLunge = exName.includes('lunge');
+      const isPress = exName.includes('shoulder') || exName.includes('press');
+      const isJacks = exName.includes('jack') || exName.includes('jumping');
+
       const cycle = (Math.sin(elapsedSec * 2.5) + 1) / 2; // Movement phase cycle (0 to 1)
 
       // MediaPipe Landmark array indexed 0 to 32
-      const landmarks = new Array(33).fill(null).map(() => ({ x: 0.5, y: 0.5, visibility: 0.9 }));
+      const landmarks = new Array(33).fill(null).map(() => ({ x: 0.5, y: 0.5, visibility: 0.95 }));
 
-      // Populate key joints (11: Left Shoulder, 12: Right Shoulder, 13: Left Elbow, 14: Right Elbow, 15: Left Wrist, 16: Right Wrist, 23: Left Hip, 24: Right Hip, 25: Left Knee, 26: Right Knee, 27: Left Ankle, 28: Right Ankle)
+      // Key Joints mapping
       landmarks[11] = { x: 0.40, y: 0.30, visibility: 0.95 }; // L Shoulder
       landmarks[12] = { x: 0.60, y: 0.30, visibility: 0.95 }; // R Shoulder
       landmarks[23] = { x: 0.43, y: 0.55, visibility: 0.95 }; // L Hip
       landmarks[24] = { x: 0.57, y: 0.55, visibility: 0.95 }; // R Hip
 
-      if (isSquat) {
-        // Squat: Knees flex (y moves down) and ankles stay
+      if (isPushup) {
+        // Horizontal Push-up / Plank pose layout
+        landmarks[11] = { x: 0.30, y: 0.55, visibility: 0.95 };
+        landmarks[12] = { x: 0.30, y: 0.55, visibility: 0.95 };
+        landmarks[13] = { x: 0.30, y: 0.68 + cycle * 0.08, visibility: 0.95 }; // Elbow flexes
+        landmarks[14] = { x: 0.30, y: 0.68 + cycle * 0.08, visibility: 0.95 };
+        landmarks[15] = { x: 0.30, y: 0.82, visibility: 0.95 }; // Wrist on ground
+        landmarks[16] = { x: 0.30, y: 0.82, visibility: 0.95 };
+        landmarks[23] = { x: 0.55, y: 0.55, visibility: 0.95 }; // Hip
+        landmarks[24] = { x: 0.55, y: 0.55, visibility: 0.95 };
+        landmarks[27] = { x: 0.85, y: 0.58, visibility: 0.95 }; // Ankle extended
+        landmarks[28] = { x: 0.85, y: 0.58, visibility: 0.95 };
+      } else if (isSquat) {
         const kneeY = 0.70 + cycle * 0.12;
         landmarks[25] = { x: 0.40, y: kneeY, visibility: 0.95 }; // L Knee
         landmarks[26] = { x: 0.60, y: kneeY, visibility: 0.95 }; // R Knee
         landmarks[27] = { x: 0.40, y: 0.90, visibility: 0.95 }; // L Ankle
         landmarks[28] = { x: 0.60, y: 0.90, visibility: 0.95 }; // R Ankle
+      } else if (isLunge) {
+        const frontKneeY = 0.68 + cycle * 0.14;
+        landmarks[25] = { x: 0.35, y: frontKneeY, visibility: 0.95 };
+        landmarks[27] = { x: 0.35, y: 0.90, visibility: 0.95 };
+        landmarks[26] = { x: 0.65, y: 0.78, visibility: 0.95 };
+        landmarks[28] = { x: 0.75, y: 0.90, visibility: 0.95 };
+      } else if (isPress) {
+        const wristY = 0.45 - cycle * 0.28;
+        landmarks[13] = { x: 0.35, y: 0.38, visibility: 0.95 };
+        landmarks[14] = { x: 0.65, y: 0.38, visibility: 0.95 };
+        landmarks[15] = { x: 0.35, y: wristY, visibility: 0.95 };
+        landmarks[16] = { x: 0.65, y: wristY, visibility: 0.95 };
+      } else if (isJacks) {
+        const armXOffset = cycle * 0.25;
+        const wristY = 0.55 - cycle * 0.40;
+        landmarks[15] = { x: 0.40 - armXOffset, y: wristY, visibility: 0.95 };
+        landmarks[16] = { x: 0.60 + armXOffset, y: wristY, visibility: 0.95 };
       } else {
-        // Bicep Curl: Elbow fixed at side, wrist curls up and down
-        landmarks[13] = { x: 0.38, y: 0.45, visibility: 0.95 }; // L Elbow
-        landmarks[14] = { x: 0.62, y: 0.45, visibility: 0.95 }; // R Elbow
-        const wristY = 0.65 - cycle * 0.38; // 0.65 (extended) -> 0.27 (flexed/up)
-        landmarks[15] = { x: 0.38, y: wristY, visibility: 0.95 }; // L Wrist
-        landmarks[16] = { x: 0.62, y: wristY, visibility: 0.95 }; // R Wrist
+        // Bicep Curl
+        landmarks[13] = { x: 0.38, y: 0.45, visibility: 0.95 };
+        landmarks[14] = { x: 0.62, y: 0.45, visibility: 0.95 };
+        const wristY = 0.65 - cycle * 0.38;
+        landmarks[15] = { x: 0.38, y: wristY, visibility: 0.95 };
+        landmarks[16] = { x: 0.62, y: wristY, visibility: 0.95 };
       }
 
       // Execute CV Engine analysis
@@ -231,44 +296,33 @@ export const CameraViewfinder = ({
       if (analysis.voiceCue && (analysis.postureState === 'WARNING' || analysis.postureState === 'FAULT')) {
         speakPostureFeedback(analysis.voiceCue, isAudioMuted);
 
-        // Add to live posture warning log
         setFormLog(prev => {
           if (prev.length > 0 && prev[0].msg === analysis.feedbackMessage) return prev;
           return [{ time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' }), msg: analysis.feedbackMessage, state: analysis.postureState }, ...prev.slice(0, 4)];
         });
       }
 
-      const ctx = canvas.getContext('2d');
-      if (canvas.width !== video.videoWidth || canvas.height !== video.videoHeight) {
-        canvas.width = video.videoWidth || 640;
-        canvas.height = video.videoHeight || 480;
-      }
-
-      ctx.clearRect(0, 0, canvas.width, canvas.height);
-
       if (showHudOverlay) {
-        const w = canvas.width;
-        const h = canvas.height;
         const time = Date.now() * 0.003;
 
-        // Posture Status Theme Colors
-        let strokeColor = 'rgba(16, 185, 129, 0.8)'; // Emerald Green (Perfect)
+        // Posture Status Theme Colors: Green = PERFECT, Amber = WARNING, Red = FAULT
+        let strokeColor = 'rgba(16, 185, 129, 0.85)'; // Emerald Green
         let glowColor = '#10b981';
         let accentColor = 'rgba(16, 185, 129, 0.3)';
 
         if (analysis.postureState === 'WARNING') {
-          strokeColor = 'rgba(245, 158, 11, 0.9)'; // Amber Yellow
+          strokeColor = 'rgba(245, 158, 11, 0.95)'; // Amber Yellow
           glowColor = '#f59e0b';
           accentColor = 'rgba(245, 158, 11, 0.3)';
         } else if (analysis.postureState === 'FAULT') {
-          strokeColor = 'rgba(244, 63, 94, 0.9)'; // Rose Red
+          strokeColor = 'rgba(244, 63, 94, 0.95)'; // Rose Red
           glowColor = '#f43f5e';
           accentColor = 'rgba(244, 63, 94, 0.4)';
         }
 
         // Bounding Box Guide
-        const boxWidth = w * 0.52;
-        const boxHeight = h * 0.78;
+        const boxWidth = w * 0.54;
+        const boxHeight = h * 0.80;
         const boxX = (w - boxWidth) / 2;
         const boxY = (h - boxHeight) / 2;
 
@@ -279,7 +333,7 @@ export const CameraViewfinder = ({
         ctx.setLineDash([]);
 
         // Animated Corner Brackets
-        const cornerLen = 22;
+        const cornerLen = 24;
         ctx.strokeStyle = glowColor;
         ctx.lineWidth = 3.5;
 
@@ -331,70 +385,98 @@ export const CameraViewfinder = ({
 
         // Draw Skeletal Mesh Lines
         ctx.strokeStyle = strokeColor;
-        ctx.lineWidth = 2.5;
+        ctx.lineWidth = 3;
 
         ctx.beginPath();
-        // Spine line
-        ctx.moveTo(headX, headY);
-        ctx.lineTo(headX, spineY);
-        // Shoulder line
-        ctx.moveTo(lShoulderX, shoulderY);
-        ctx.lineTo(rShoulderX, shoulderY);
-        // Hips line
-        ctx.moveTo(lHipX, hipY);
-        ctx.lineTo(rHipX, hipY);
-        // Left Leg
-        ctx.moveTo(lHipX, hipY);
-        ctx.lineTo(lKneeX, kneeY);
-        ctx.lineTo(lAnkleX, ankleY);
-        // Right Leg
-        ctx.moveTo(rHipX, hipY);
-        ctx.lineTo(rKneeX, kneeY);
-        ctx.lineTo(rAnkleX, ankleY);
-        ctx.stroke();
+        if (isPushup) {
+          // Horizontal Plank Skeleton
+          const pHeadX = boxX + boxWidth * 0.15;
+          const pHeadY = boxY + boxHeight * 0.50;
+          const pShoulderX = pHeadX + boxWidth * 0.15;
+          const pHipX = pShoulderX + boxWidth * 0.35;
+          const pAnkleX = pHipX + boxWidth * 0.30;
+          const pWristY = boxY + boxHeight * 0.78;
 
-        // Draw joint nodes
-        const joints = [
-          { x: headX, y: headY, label: 'Head' },
-          { x: lShoulderX, y: shoulderY, label: 'L Shoulder' },
-          { x: rShoulderX, y: shoulderY, label: 'R Shoulder' },
-          { x: headX, y: spineY, label: `${analysis.angleName}: ${analysis.keyAngle}°` },
-          { x: lHipX, y: hipY, label: 'L Hip' },
-          { x: rHipX, y: hipY, label: 'R Hip' },
-          { x: lKneeX, y: kneeY, label: 'L Knee' },
-          { x: rKneeX, y: rKneeX ? kneeY : kneeY, label: 'R Knee' }
-        ];
+          ctx.moveTo(pHeadX, pHeadY);
+          ctx.lineTo(pShoulderX, pHeadY);
+          ctx.lineTo(pHipX, pHeadY);
+          ctx.lineTo(pAnkleX, pHeadY + 10);
 
-        joints.forEach(j => {
-          ctx.fillStyle = glowColor;
-          ctx.beginPath();
-          ctx.arc(j.x, j.y, 5, 0, Math.PI * 2);
-          ctx.fill();
+          ctx.moveTo(pShoulderX, pHeadY);
+          ctx.lineTo(pShoulderX, pWristY);
+          ctx.stroke();
 
-          ctx.fillStyle = accentColor;
-          ctx.beginPath();
-          ctx.arc(j.x, j.y, 11 + Math.sin(time * 4) * 2, 0, Math.PI * 2);
-          ctx.fill();
-        });
+          // Joint nodes for pushup
+          [
+            { x: pHeadX, y: pHeadY },
+            { x: pShoulderX, y: pHeadY },
+            { x: pHipX, y: pHeadY },
+            { x: pAnkleX, y: pHeadY + 10 },
+            { x: pShoulderX, y: pWristY }
+          ].forEach(j => {
+            ctx.fillStyle = glowColor;
+            ctx.beginPath();
+            ctx.arc(j.x, j.y, 6, 0, Math.PI * 2);
+            ctx.fill();
+          });
+        } else {
+          // Vertical Posture Skeleton
+          ctx.moveTo(headX, headY);
+          ctx.lineTo(headX, spineY);
+          ctx.moveTo(lShoulderX, shoulderY);
+          ctx.lineTo(rShoulderX, shoulderY);
+          ctx.moveTo(lHipX, hipY);
+          ctx.lineTo(rHipX, hipY);
+          ctx.moveTo(lHipX, hipY);
+          ctx.lineTo(lKneeX, kneeY);
+          ctx.lineTo(lAnkleX, ankleY);
+          ctx.moveTo(rHipX, hipY);
+          ctx.lineTo(rKneeX, kneeY);
+          ctx.lineTo(rAnkleX, ankleY);
+          ctx.stroke();
 
-        // Render Live Angle Badge directly on canvas at spine joint
-        ctx.fillStyle = 'rgba(15, 23, 42, 0.85)';
+          const joints = [
+            { x: headX, y: headY },
+            { x: lShoulderX, y: shoulderY },
+            { x: rShoulderX, y: shoulderY },
+            { x: headX, y: spineY },
+            { x: lHipX, y: hipY },
+            { x: rHipX, y: hipY },
+            { x: lKneeX, y: kneeY },
+            { x: rKneeX, y: kneeY }
+          ];
+
+          joints.forEach(j => {
+            ctx.fillStyle = glowColor;
+            ctx.beginPath();
+            ctx.arc(j.x, j.y, 5, 0, Math.PI * 2);
+            ctx.fill();
+
+            ctx.fillStyle = accentColor;
+            ctx.beginPath();
+            ctx.arc(j.x, j.y, 11 + Math.sin(time * 4) * 2, 0, Math.PI * 2);
+            ctx.fill();
+          });
+        }
+
+        // Render Live Angle Badge directly on canvas
+        ctx.fillStyle = 'rgba(15, 23, 42, 0.88)';
         ctx.strokeStyle = glowColor;
-        ctx.lineWidth = 1;
-        const badgeW = 140;
-        const badgeH = 26;
+        ctx.lineWidth = 1.5;
+        const badgeW = 165;
+        const badgeH = 28;
         const badgeX = headX - badgeW / 2;
-        const badgeY = spineY - 35;
+        const badgeY = isPushup ? boxY + boxHeight * 0.25 : spineY - 35;
 
         ctx.beginPath();
-        ctx.roundRect(badgeX, badgeY, badgeW, badgeH, 6);
+        ctx.roundRect(badgeX, badgeY, badgeW, badgeH, 8);
         ctx.fill();
         ctx.stroke();
 
         ctx.fillStyle = '#f8fafc';
         ctx.font = 'bold 11px Inter, sans-serif';
         ctx.textAlign = 'center';
-        ctx.fillText(`${analysis.angleName}: ${analysis.keyAngle}°`, headX, badgeY + 17);
+        ctx.fillText(`${analysis.angleName}: ${analysis.keyAngle}°`, headX, badgeY + 18);
       }
 
       animFrameRef.current = requestAnimationFrame(draw);
@@ -470,33 +552,71 @@ export const CameraViewfinder = ({
           }`}
         />
 
+        {/* NO HUMAN DETECTED BACKDROP OVERLAY */}
+        {isCameraOn && !isHumanDetected && (
+          <div className="absolute inset-0 z-30 flex flex-col items-center justify-center bg-slate-950/80 backdrop-blur-md p-6 text-center animate-in fade-in">
+            <div className="w-16 h-16 rounded-2xl bg-slate-900 border border-slate-700 flex items-center justify-center text-amber-400 mb-3 shadow-xl">
+              <UserX className="w-8 h-8 animate-pulse" />
+            </div>
+            <h3 className="text-lg font-extrabold text-slate-100 uppercase tracking-wide">
+              No Human Detected
+            </h3>
+            <p className="text-xs text-slate-400 max-w-sm mt-1 leading-relaxed">
+              Please step into the camera view facing the screen. Real-time posture lines, joint angle measurements, and voice assistance will activate automatically.
+            </p>
+            <button
+              onClick={() => setIsHumanDetected(true)}
+              className="mt-4 px-4 py-2 rounded-xl bg-emerald-500/20 border border-emerald-500/40 text-emerald-400 text-xs font-bold hover:bg-emerald-500/30 transition-all flex items-center gap-2"
+            >
+              <UserCheck className="w-4 h-4" />
+              <span>Human Entered Screen (Activate Tracking)</span>
+            </button>
+          </div>
+        )}
+
         {/* ACTIVE CAMERA TOP HUD & POSTURE SCORE */}
         {isCameraOn && (
           <div className="absolute top-4 left-4 right-4 z-20 flex items-center justify-between pointer-events-none">
             {/* Live Camera Badge */}
             <div className="flex items-center gap-2 bg-slate-900/90 backdrop-blur-md px-3 py-1.5 rounded-xl border border-slate-800 pointer-events-auto shadow-lg">
               <span className="relative flex h-2.5 w-2.5">
-                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75" />
-                <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-emerald-500" />
+                <span className={`animate-ping absolute inline-flex h-full w-full rounded-full ${isHumanDetected ? 'bg-emerald-400' : 'bg-amber-400'} opacity-75`} />
+                <span className={`relative inline-flex rounded-full h-2.5 w-2.5 ${isHumanDetected ? 'bg-emerald-500' : 'bg-amber-500'}`} />
               </span>
-              <span className="text-xs font-bold text-emerald-400 uppercase tracking-wider">
-                AI Posture Correction Active
+              <span className={`text-xs font-bold uppercase tracking-wider ${isHumanDetected ? 'text-emerald-400' : 'text-amber-400'}`}>
+                {isHumanDetected ? 'AI Posture Active' : 'Searching for Human'}
               </span>
             </div>
 
             {/* Posture Score & Controls */}
             <div className="flex items-center gap-2 pointer-events-auto">
+              {/* Human Presence Toggle */}
+              <button
+                onClick={() => setIsHumanDetected(!isHumanDetected)}
+                className={`px-3 py-1 rounded-xl text-xs font-extrabold backdrop-blur-md transition-colors border flex items-center gap-1.5 shadow-lg ${
+                  isHumanDetected
+                    ? 'bg-emerald-950/80 border-emerald-500/50 text-emerald-300'
+                    : 'bg-amber-950/80 border-amber-500/50 text-amber-300'
+                }`}
+                title="Toggle Human Detection State"
+              >
+                {isHumanDetected ? <UserCheck className="w-3.5 h-3.5" /> : <UserX className="w-3.5 h-3.5" />}
+                <span>{isHumanDetected ? 'Human Detected' : 'No Human'}</span>
+              </button>
+
               {/* Form Score Pill */}
-              <div className={`px-3 py-1 rounded-xl text-xs font-extrabold flex items-center gap-1.5 backdrop-blur-md border shadow-lg ${
-                postureMetrics.postureState === 'PERFECT'
-                  ? 'bg-emerald-950/80 border-emerald-500/50 text-emerald-400'
-                  : postureMetrics.postureState === 'WARNING'
-                  ? 'bg-amber-950/80 border-amber-500/50 text-amber-400'
-                  : 'bg-rose-950/80 border-rose-500/50 text-rose-400'
-              }`}>
-                <Activity className="w-3.5 h-3.5" />
-                <span>{postureMetrics.postureScore}% Form Score</span>
-              </div>
+              {isHumanDetected && (
+                <div className={`px-3 py-1 rounded-xl text-xs font-extrabold flex items-center gap-1.5 backdrop-blur-md border shadow-lg ${
+                  postureMetrics.postureState === 'PERFECT'
+                    ? 'bg-emerald-950/80 border-emerald-500/50 text-emerald-400'
+                    : postureMetrics.postureState === 'WARNING'
+                    ? 'bg-amber-950/80 border-amber-500/50 text-amber-400'
+                    : 'bg-rose-950/80 border-rose-500/50 text-rose-400'
+                }`}>
+                  <Activity className="w-3.5 h-3.5" />
+                  <span>{postureMetrics.postureScore}% Form Score</span>
+                </div>
+              )}
 
               {/* Voice Coach Mute Toggle */}
               <button
@@ -535,7 +655,7 @@ export const CameraViewfinder = ({
         )}
 
         {/* FLOATING POSTURE WARNING BANNER ON VIDEO FEED */}
-        {isCameraOn && showHudOverlay && (
+        {isCameraOn && isHumanDetected && showHudOverlay && (
           <div className="absolute bottom-4 left-4 right-4 z-20 pointer-events-none">
             <div className={`p-3 rounded-xl border backdrop-blur-md transition-all duration-300 flex items-center justify-between shadow-2xl ${
               postureMetrics.postureState === 'PERFECT'
@@ -586,7 +706,7 @@ export const CameraViewfinder = ({
                 Live AI Posture Correction Camera
               </h3>
               <p className="text-xs text-slate-400 mt-1 leading-relaxed">
-                Click here or press the button below to grant camera permission. Real-time joint analysis will correct your form and prevent injuries.
+                Click here or press the button below to grant camera permission. Real-time joint analysis will correct your form for all exercises and prevent injuries.
               </p>
             </div>
 

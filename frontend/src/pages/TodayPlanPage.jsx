@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Play, Sliders, Clock, Dumbbell, Sparkles, CheckCircle2, ChevronRight } from 'lucide-react';
+import { Play, Sliders, Clock, Dumbbell, Sparkles, CheckCircle2, ChevronRight, Camera } from 'lucide-react';
 import { Button } from '../components/common/Button';
 import { Card } from '../components/common/Card';
 import { Badge } from '../components/common/Badge';
@@ -10,7 +10,7 @@ import { useApp } from '../context/AppContext';
 
 export const TodayPlanPage = () => {
   const navigate = useNavigate();
-  const { currentPlan, dailyContext } = useApp();
+  const { currentPlan, dailyContext, startWorkoutSession } = useApp();
   const [isAdjustModalOpen, setIsAdjustModalOpen] = useState(false);
 
   return (
@@ -31,7 +31,7 @@ export const TodayPlanPage = () => {
             </p>
           </div>
 
-          <div className="flex items-center gap-3">
+          <div className="flex flex-wrap items-center gap-3">
             <Button
               variant="outline"
               leftIcon={Sliders}
@@ -40,10 +40,24 @@ export const TodayPlanPage = () => {
               Adjust
             </Button>
             <Button
+              variant="brand"
+              size="md"
+              leftIcon={Camera}
+              onClick={() => {
+                if (startWorkoutSession) startWorkoutSession();
+                navigate('/live-counter');
+              }}
+            >
+              Live AI Camera Workout
+            </Button>
+            <Button
               variant="primary"
-              size="lg"
+              size="md"
               leftIcon={Play}
-              onClick={() => navigate('/workout')}
+              onClick={() => {
+                if (startWorkoutSession) startWorkoutSession();
+                navigate('/workout');
+              }}
             >
               Start Workout
             </Button>

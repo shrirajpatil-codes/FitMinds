@@ -1,9 +1,8 @@
 /**
- * FITMINDS CV Exercise Engine
- * Directly ported from ml/CV_model/exercise_analyzer.py
+ * FITMINDS Universal CV Exercise Engine
  * Performs real-time joint angle calculations, exponential smoothing,
  * rep counting, movement stage tracking (UP/DOWN), range of motion (ROM),
- * depth assessment, and biomechanical posture feedback.
+ * depth assessment, and biomechanical posture feedback for ALL exercises.
  */
 
 // ============================================================
@@ -73,14 +72,8 @@ export class BicepCurlAnalyzer {
       return this.getFallbackData();
     }
 
-    // MediaPipe 33 Landmark Indexes
-    const LEFT_SHOULDER = 11;
-    const LEFT_ELBOW = 13;
-    const LEFT_WRIST = 15;
-
-    const RIGHT_SHOULDER = 12;
-    const RIGHT_ELBOW = 14;
-    const RIGHT_WRIST = 16;
+    const LEFT_SHOULDER = 11, LEFT_ELBOW = 13, LEFT_WRIST = 15;
+    const RIGHT_SHOULDER = 12, RIGHT_ELBOW = 14, RIGHT_WRIST = 16;
 
     const leftShoulder = landmarks[LEFT_SHOULDER] || { x: 0.35, y: 0.3, visibility: 0.9 };
     const leftElbow = landmarks[LEFT_ELBOW] || { x: 0.35, y: 0.5, visibility: 0.9 };
@@ -109,11 +102,9 @@ export class BicepCurlAnalyzer {
     const rawAngle = calculateAngle(shoulder, elbow, wrist);
     const angle = this.angleSmoother.update(rawAngle);
 
-    // Track Range of Motion
     this.minAngle = Math.min(this.minAngle, angle);
     this.maxAngle = Math.max(this.maxAngle, angle);
 
-    // Rep Counting Logic
     let repIncremented = false;
     if (angle > 150) {
       this.stage = 'down';
@@ -125,7 +116,6 @@ export class BicepCurlAnalyzer {
       repIncremented = true;
     }
 
-    // Feedback
     let feedback = '';
     let voiceCue = '';
     let formScore = 95;
@@ -201,14 +191,8 @@ export class SquatAnalyzer {
       return this.getFallbackData();
     }
 
-    // MediaPipe 33 Landmark Indexes
-    const LEFT_HIP = 23;
-    const LEFT_KNEE = 25;
-    const LEFT_ANKLE = 27;
-
-    const RIGHT_HIP = 24;
-    const RIGHT_KNEE = 26;
-    const RIGHT_ANKLE = 28;
+    const LEFT_HIP = 23, LEFT_KNEE = 25, LEFT_ANKLE = 27;
+    const RIGHT_HIP = 24, RIGHT_KNEE = 26, RIGHT_ANKLE = 28;
 
     const leftHip = landmarks[LEFT_HIP];
     const leftKnee = landmarks[LEFT_KNEE];
@@ -226,7 +210,6 @@ export class SquatAnalyzer {
 
     const angle = (leftAngle + rightAngle) / 2;
 
-    // Rep Counting Logic
     let repIncremented = false;
     if (angle < 110) {
       this.stage = 'down';
@@ -238,7 +221,6 @@ export class SquatAnalyzer {
       repIncremented = true;
     }
 
-    // Depth Calculation
     let depth = 'Shallow';
     if (angle < 90) {
       depth = 'Deep';
@@ -248,7 +230,6 @@ export class SquatAnalyzer {
       depth = 'Shallow';
     }
 
-    // Form Feedback
     let feedback = '';
     let voiceCue = '';
     let postureState = 'PERFECT';
@@ -308,7 +289,411 @@ export class SquatAnalyzer {
 }
 
 // ============================================================
-// EXERCISE ENGINE WRAPPER
+// PUSH-UP ANALYZER
+// ============================================================
+
+export class PushupAnalyzer {
+  constructor() {
+    this.reps = 0;
+    this.stage = 'up';
+    this.elbowSmoother = new AngleSmoother(0.35);
+    this.hipSmoother = new AngleSmoother(0.35);
+  }
+
+  update(landmarks) {
+    if (!landmarks || landmarks.length < 29) {
+      return this.getFallbackData();
+    }
+
+    const SHOULDER = landmarks[12] || landmarks[11];
+    const ELBOW = landmarks[14] || landmarks[13];
+    const WRIST = landmarks[16] || landmarks[15];
+
+    const HIP = landmarks[24] || landmarks[23];
+    const ANKLE = landmarks[28] || landmarks[27];
+
+    const rawElbowAngle = calculateAngle(SHOULDER, ELBOW, WRIST);
+    const rawHipAngle = calculateAngle(SHOULDER, HIP, ANKLE);
+
+    const elbowAngle = this.elbowSmoother.update(rawElbowAngle);
+    const hipAngle = this.hipSmoother.update(rawHipAngle);
+
+    let repIncremented = false;
+    if (elbowAngle < 95) {
+      this.stage = 'down';
+    }
+
+    if (elbowAngle > 155 && this.stage === 'down') {
+      this.stage = 'up';
+      this.reps += 1;
+      repIncremented = true;
+    }
+
+    let postureState = 'PERFECT';
+    let formScore = 96;
+    let feedback = 'Maintain body plank alignment';
+    let voiceCue = '';
+
+    // Check Plank Line / Sagging Hips
+    if (hipAngle < 155 || hipAngle > 195) {
+      postureState = 'FAULT';
+      formScore = 60;
+      feedback = 'Sagging or arched hips! Keep body in straight line.';
+      voiceCue = 'Lift your hips, keep body straight!';
+    } else if (elbowAngle > 110 && this.stage === 'down') {
+      postureState = 'WARNING';
+      formScore = 78;
+      feedback = 'Lower chest closer to floor for full depth';
+      voiceCue = 'Push down lower!';
+    } else if (elbowAngle < 90) {
+      postureState = 'PERFECT';
+      formScore = 98;
+      feedback = 'Great push-up depth! Core tight.';
+      voiceCue = 'Great chest depth!';
+    }
+
+    return {
+      exercise: 'Push-up',
+      angle: Math.round(elbowAngle * 10) / 10,
+      hipAngle: Math.round(hipAngle * 10) / 10,
+      reps: this.reps,
+      stage: this.stage,
+      feedback,
+      voiceCue: repIncremented ? 'Rep completed!' : voiceCue,
+      formScore,
+      postureState,
+      keyAngleName: 'Elbow & Hip Alignment',
+      targetRange: 'Elbow < 90° | Hip 170°'
+    };
+  }
+
+  getFallbackData() {
+    return {
+      exercise: 'Push-up',
+      angle: 165,
+      hipAngle: 175,
+      reps: this.reps,
+      stage: this.stage,
+      feedback: 'Position body horizontally in frame for Push-up tracking',
+      voiceCue: '',
+      formScore: 94,
+      postureState: 'PERFECT',
+      keyAngleName: 'Elbow & Hip Alignment',
+      targetRange: 'Elbow < 90° | Hip 170°'
+    };
+  }
+}
+
+// ============================================================
+// LUNGE ANALYZER
+// ============================================================
+
+export class LungeAnalyzer {
+  constructor() {
+    this.reps = 0;
+    this.stage = 'up';
+    this.kneeSmoother = new AngleSmoother(0.35);
+  }
+
+  update(landmarks) {
+    if (!landmarks || landmarks.length < 29) {
+      return this.getFallbackData();
+    }
+
+    const HIP = landmarks[23];
+    const KNEE = landmarks[25];
+    const ANKLE = landmarks[27];
+
+    const rawKneeAngle = calculateAngle(HIP, KNEE, ANKLE);
+    const kneeAngle = this.kneeSmoother.update(rawKneeAngle);
+
+    let repIncremented = false;
+    if (kneeAngle < 100) {
+      this.stage = 'down';
+    }
+
+    if (kneeAngle > 155 && this.stage === 'down') {
+      this.stage = 'up';
+      this.reps += 1;
+      repIncremented = true;
+    }
+
+    let postureState = 'PERFECT';
+    let formScore = 95;
+    let feedback = 'Lower back knee toward floor';
+    let voiceCue = '';
+
+    if (kneeAngle < 90) {
+      postureState = 'PERFECT';
+      formScore = 98;
+      feedback = 'Perfect lunge depth! Torso upright.';
+      voiceCue = 'Great lunge form!';
+    } else if (kneeAngle > 115 && this.stage === 'down') {
+      postureState = 'WARNING';
+      formScore = 76;
+      feedback = 'Step wider and drop hips lower';
+      voiceCue = 'Drop hips lower!';
+    }
+
+    return {
+      exercise: 'Lunge',
+      angle: Math.round(kneeAngle * 10) / 10,
+      reps: this.reps,
+      stage: this.stage,
+      feedback,
+      voiceCue: repIncremented ? 'Rep completed!' : voiceCue,
+      formScore,
+      postureState,
+      keyAngleName: 'Lead Knee Angle',
+      targetRange: '85° - 95°'
+    };
+  }
+
+  getFallbackData() {
+    return {
+      exercise: 'Lunge',
+      angle: 170,
+      reps: this.reps,
+      stage: this.stage,
+      feedback: 'Step into frame in split stance for Lunge tracking',
+      voiceCue: '',
+      formScore: 92,
+      postureState: 'PERFECT',
+      keyAngleName: 'Lead Knee Angle',
+      targetRange: '85° - 95°'
+    };
+  }
+}
+
+// ============================================================
+// PLANK ANALYZER
+// ============================================================
+
+export class PlankAnalyzer {
+  constructor() {
+    this.reps = 0; // Plank tracks hold duration in seconds
+    this.stage = 'holding';
+    this.hipSmoother = new AngleSmoother(0.35);
+  }
+
+  update(landmarks) {
+    if (!landmarks || landmarks.length < 29) {
+      return this.getFallbackData();
+    }
+
+    const SHOULDER = landmarks[11];
+    const HIP = landmarks[23];
+    const ANKLE = landmarks[27];
+
+    const rawHipAngle = calculateAngle(SHOULDER, HIP, ANKLE);
+    const hipAngle = this.hipSmoother.update(rawHipAngle);
+
+    let postureState = 'PERFECT';
+    let formScore = 96;
+    let feedback = 'Solid plank line! Core engaged.';
+    let voiceCue = '';
+
+    if (hipAngle < 160) {
+      postureState = 'FAULT';
+      formScore = 58;
+      feedback = 'Sagging hips detected! Engage core and tuck pelvis.';
+      voiceCue = 'Engage core, lift hips!';
+    } else if (hipAngle > 195) {
+      postureState = 'WARNING';
+      formScore = 75;
+      feedback = 'Piking hips too high — flatten your spine line.';
+      voiceCue = 'Lower hips to neutral!';
+    }
+
+    return {
+      exercise: 'Plank',
+      angle: Math.round(hipAngle * 10) / 10,
+      reps: this.reps,
+      stage: this.stage,
+      feedback,
+      voiceCue,
+      formScore,
+      postureState,
+      keyAngleName: 'Spine & Hip Angle',
+      targetRange: '170° - 180°'
+    };
+  }
+
+  getFallbackData() {
+    return {
+      exercise: 'Plank',
+      angle: 176,
+      reps: this.reps,
+      stage: 'holding',
+      feedback: 'Hold horizontal plank posture in camera view',
+      voiceCue: '',
+      formScore: 95,
+      postureState: 'PERFECT',
+      keyAngleName: 'Spine & Hip Angle',
+      targetRange: '170° - 180°'
+    };
+  }
+}
+
+// ============================================================
+// SHOULDER PRESS ANALYZER
+// ============================================================
+
+export class ShoulderPressAnalyzer {
+  constructor() {
+    this.reps = 0;
+    this.stage = 'down';
+    this.elbowSmoother = new AngleSmoother(0.35);
+  }
+
+  update(landmarks) {
+    if (!landmarks || landmarks.length < 17) {
+      return this.getFallbackData();
+    }
+
+    const SHOULDER = landmarks[12] || landmarks[11];
+    const ELBOW = landmarks[14] || landmarks[13];
+    const WRIST = landmarks[16] || landmarks[15];
+
+    const rawElbowAngle = calculateAngle(SHOULDER, ELBOW, WRIST);
+    const elbowAngle = this.elbowSmoother.update(rawElbowAngle);
+
+    let repIncremented = false;
+    if (elbowAngle < 85) {
+      this.stage = 'down';
+    }
+
+    if (elbowAngle > 155 && this.stage === 'down') {
+      this.stage = 'up';
+      this.reps += 1;
+      repIncremented = true;
+    }
+
+    let postureState = 'PERFECT';
+    let formScore = 95;
+    let feedback = 'Press weights overhead with controlled path';
+    let voiceCue = '';
+
+    if (elbowAngle > 155) {
+      postureState = 'PERFECT';
+      formScore = 98;
+      feedback = 'Full extension overhead!';
+      voiceCue = 'Full overhead extension!';
+    } else if (elbowAngle < 85) {
+      postureState = 'PERFECT';
+      formScore = 92;
+      feedback = 'Good starting depth at chin level';
+      voiceCue = 'Press up!';
+    }
+
+    return {
+      exercise: 'Shoulder Press',
+      angle: Math.round(elbowAngle * 10) / 10,
+      reps: this.reps,
+      stage: this.stage,
+      feedback,
+      voiceCue: repIncremented ? 'Rep completed!' : voiceCue,
+      formScore,
+      postureState,
+      keyAngleName: 'Elbow Lockout Angle',
+      targetRange: '75° - 165°'
+    };
+  }
+
+  getFallbackData() {
+    return {
+      exercise: 'Shoulder Press',
+      angle: 150,
+      reps: this.reps,
+      stage: this.stage,
+      feedback: 'Raise arms in frame for Shoulder Press tracking',
+      voiceCue: '',
+      formScore: 92,
+      postureState: 'PERFECT',
+      keyAngleName: 'Elbow Lockout Angle',
+      targetRange: '75° - 165°'
+    };
+  }
+}
+
+// ============================================================
+// JUMPING JACK ANALYZER
+// ============================================================
+
+export class JumpingJackAnalyzer {
+  constructor() {
+    this.reps = 0;
+    this.stage = 'closed';
+    this.armSmoother = new AngleSmoother(0.35);
+  }
+
+  update(landmarks) {
+    if (!landmarks || landmarks.length < 29) {
+      return this.getFallbackData();
+    }
+
+    const HIP = landmarks[24];
+    const SHOULDER = landmarks[12];
+    const WRIST = landmarks[16];
+
+    const rawArmAngle = calculateAngle(HIP, SHOULDER, WRIST);
+    const armAngle = this.armSmoother.update(rawArmAngle);
+
+    let repIncremented = false;
+    if (armAngle < 40) {
+      this.stage = 'closed';
+    }
+
+    if (armAngle > 130 && this.stage === 'closed') {
+      this.stage = 'open';
+      this.reps += 1;
+      repIncremented = true;
+    }
+
+    let postureState = 'PERFECT';
+    let formScore = 95;
+    let feedback = 'Raise hands above head and jump feet outward';
+    let voiceCue = '';
+
+    if (armAngle > 130) {
+      postureState = 'PERFECT';
+      formScore = 98;
+      feedback = 'Great arm elevation!';
+      voiceCue = 'Great jack!';
+    }
+
+    return {
+      exercise: 'Jumping Jacks',
+      angle: Math.round(armAngle * 10) / 10,
+      reps: this.reps,
+      stage: this.stage,
+      feedback,
+      voiceCue: repIncremented ? 'Rep completed!' : voiceCue,
+      formScore,
+      postureState,
+      keyAngleName: 'Arm Elevation Angle',
+      targetRange: '30° - 140°'
+    };
+  }
+
+  getFallbackData() {
+    return {
+      exercise: 'Jumping Jacks',
+      angle: 35,
+      reps: this.reps,
+      stage: this.stage,
+      feedback: 'Stand full body in frame for Jumping Jack tracking',
+      voiceCue: '',
+      formScore: 93,
+      postureState: 'PERFECT',
+      keyAngleName: 'Arm Elevation Angle',
+      targetRange: '30° - 140°'
+    };
+  }
+}
+
+// ============================================================
+// UNIVERSAL EXERCISE ENGINE WRAPPER
 // ============================================================
 
 export class CVExerciseEngine {
@@ -319,14 +704,26 @@ export class CVExerciseEngine {
   setExercise(exercise) {
     const ex = (exercise || 'bicep').toLowerCase().trim();
 
-    if (ex.includes('bicep') || ex.includes('curl') || ex.includes('arm')) {
-      this.exerciseName = 'bicep';
-      this.analyzer = new BicepCurlAnalyzer();
-    } else if (ex.includes('squat') || ex.includes('leg') || ex.includes('thigh')) {
+    if (ex.includes('push') || ex.includes('press-up')) {
+      this.exerciseName = 'pushup';
+      this.analyzer = new PushupAnalyzer();
+    } else if (ex.includes('squat') || ex.includes('leg')) {
       this.exerciseName = 'squat';
       this.analyzer = new SquatAnalyzer();
+    } else if (ex.includes('lunge')) {
+      this.exerciseName = 'lunge';
+      this.analyzer = new LungeAnalyzer();
+    } else if (ex.includes('plank')) {
+      this.exerciseName = 'plank';
+      this.analyzer = new PlankAnalyzer();
+    } else if (ex.includes('shoulder') || ex.includes('overhead')) {
+      this.exerciseName = 'shoulder_press';
+      this.analyzer = new ShoulderPressAnalyzer();
+    } else if (ex.includes('jack') || ex.includes('jumping')) {
+      this.exerciseName = 'jumping_jacks';
+      this.analyzer = new JumpingJackAnalyzer();
     } else {
-      // Default to bicep curl
+      // Default to bicep curl / arm curls
       this.exerciseName = 'bicep';
       this.analyzer = new BicepCurlAnalyzer();
     }

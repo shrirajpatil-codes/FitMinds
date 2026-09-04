@@ -85,7 +85,7 @@ export const DashboardPage = () => {
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 pb-2 border-b border-slate-800">
         <div>
           <div className="flex items-center gap-3">
-            <h2 className="text-2xl font-bold text-slate-100">Good morning, {userProfile.name}</h2>
+            <h2 className="text-2xl font-bold text-slate-100">Hello, {userProfile.name}</h2>
             <Badge variant={readinessVariant} size="lg">
               {dailyContext.readiness}
             </Badge>
@@ -101,28 +101,11 @@ export const DashboardPage = () => {
               Daily Check-in
             </Button>
           </Link>
-          <Button
-            variant="brand"
-            size="sm"
-            leftIcon={Camera}
-            onClick={() => {
-              startWorkoutSession();
-              navigate('/live-counter');
-            }}
-          >
-            Live AI Camera Workout
-          </Button>
-          <Button
-            variant="primary"
-            size="sm"
-            leftIcon={Play}
-            onClick={() => {
-              startWorkoutSession();
-              navigate('/workout');
-            }}
-          >
-            Start Workout
-          </Button>
+          <Link to="/today">
+            <Button variant="primary" size="sm" leftIcon={Calendar}>
+              Today's Plan
+            </Button>
+          </Link>
         </div>
       </div>
 

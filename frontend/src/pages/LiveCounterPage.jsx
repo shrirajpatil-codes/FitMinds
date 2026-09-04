@@ -73,8 +73,13 @@ export const LiveCounterPage = () => {
               }}
               className="bg-slate-950 text-slate-100 text-xs font-bold px-2.5 py-1 rounded-lg border border-slate-700 focus:outline-none focus:border-brand"
             >
-              <option value="Bicep Curl">Bicep Curl</option>
+              <option value="Push-up">Push-ups</option>
               <option value="Squat">Squats</option>
+              <option value="Bicep Curl">Bicep Curl</option>
+              <option value="Lunge">Lunges</option>
+              <option value="Plank">Plank</option>
+              <option value="Shoulder Press">Shoulder Press</option>
+              <option value="Jumping Jacks">Jumping Jacks</option>
             </select>
           </div>
 

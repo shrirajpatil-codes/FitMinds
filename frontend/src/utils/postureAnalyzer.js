@@ -1,7 +1,7 @@
 /**
  * FITMINDS Real-Time Posture Correction Engine
  * Analyzes joint positions, calculates biomechanical angles,
- * and provides real-time posture feedback & audio coaching cues.
+ * and provides real-time posture feedback & audio coaching cues for ALL exercises.
  */
 
 // Calculate 2D angle in degrees formed by three points (A -> B -> C, vertex at B)
@@ -21,7 +21,7 @@ let lastSpokenTime = 0;
 const SPEECH_THROTTLE_MS = 4000; // Speak at most once every 4 seconds to avoid audio clutter
 
 export const speakPostureFeedback = (text, isMuted = false) => {
-  if (isMuted || !('speechSynthesis' in window)) return;
+  if (isMuted || !text || !('speechSynthesis' in window)) return;
   const now = Date.now();
   if (now - lastSpokenTime < SPEECH_THROTTLE_MS) return;
 
@@ -32,9 +32,8 @@ export const speakPostureFeedback = (text, isMuted = false) => {
     utterance.pitch = 1.0;
     utterance.volume = 0.9;
 
-    // Pick a natural English voice if available
     const voices = window.speechSynthesis.getVoices();
-    const engVoice = voices.find(v => v.lang.startsWith('en') && v.name.includes('Google') || v.name.includes('Natural')) || voices[0];
+    const engVoice = voices.find(v => v.lang.startsWith('en') && (v.name.includes('Google') || v.name.includes('Natural'))) || voices[0];
     if (engVoice) utterance.voice = engVoice;
 
     window.speechSynthesis.speak(utterance);
@@ -45,12 +44,11 @@ export const speakPostureFeedback = (text, isMuted = false) => {
 };
 
 /**
- * Exercise Posture Rules & Biomechanical Criteria
+ * Exercise Posture Rules & Biomechanical Criteria for ALL Exercises
  */
 export const analyzeExercisePosture = (exerciseName = '', joints = {}, timeSec = 0) => {
   const ex = (exerciseName || '').toLowerCase();
   
-  // Default values
   let postureState = 'PERFECT'; // 'PERFECT' | 'WARNING' | 'FAULT'
   let postureScore = 96;
   let feedbackMessage = 'Form is optimal. Maintain spine alignment.';
@@ -59,13 +57,38 @@ export const analyzeExercisePosture = (exerciseName = '', joints = {}, timeSec =
   let angleName = 'Spine Angle';
   let targetAngleRange = '165° - 180°';
 
-  // Simulate/calculate dynamic posture parameters based on joints or exercise movement phase
   const cycle = (Math.sin(timeSec * 2) + 1) / 2; // 0 to 1 cycle
 
-  if (ex.includes('squat') || ex.includes('lunge') || ex.includes('leg')) {
+  if (ex.includes('push') || ex.includes('press-up')) {
+    angleName = 'Elbow & Hip Plank';
+    targetAngleRange = 'Elbow < 90° | Hip 170°';
+    keyAngle = Math.round(170 - cycle * 80);
+
+    if (cycle > 0.7) {
+      if (keyAngle <= 95) {
+        postureState = 'PERFECT';
+        postureScore = 98;
+        feedbackMessage = 'Great push-up depth! Maintain body plank.';
+        voiceCue = 'Great chest depth!';
+      } else {
+        postureState = 'WARNING';
+        postureScore = 78;
+        feedbackMessage = 'Lower your chest closer to floor for full rep.';
+        voiceCue = 'Push down lower!';
+      }
+    } else {
+      const HipSagCheck = Math.sin(timeSec * 4);
+      if (HipSagCheck < -0.8) {
+        postureState = 'FAULT';
+        postureScore = 58;
+        feedbackMessage = 'Sagging hips detected! Keep body straight in plank.';
+        voiceCue = 'Lift your hips, keep body straight!';
+      }
+    }
+  } else if (ex.includes('squat') || ex.includes('leg')) {
     angleName = 'Knee Flexion';
     targetAngleRange = '80° - 90° (Full Depth)';
-    keyAngle = Math.round(175 - cycle * 95); // 175 (standing) -> 80 (deep squat)
+    keyAngle = Math.round(175 - cycle * 95);
 
     if (cycle > 0.8) {
       if (keyAngle <= 90) {
@@ -79,61 +102,81 @@ export const analyzeExercisePosture = (exerciseName = '', joints = {}, timeSec =
         feedbackMessage = 'Shallow depth detected — Squat lower until thighs are parallel.';
         voiceCue = 'Squat deeper for full range!';
       }
-    } else if (cycle > 0.4 && cycle < 0.6) {
-      // Check for spine rounding simulation
-      const randomFormCheck = Math.sin(timeSec * 5);
-      if (randomFormCheck < -0.7) {
-        postureState = 'FAULT';
-        postureScore = 62;
-        feedbackMessage = 'Spine rounding detected! Keep chest lifted and back straight.';
-        voiceCue = 'Keep your back straight!';
-      }
     }
-  } else if (ex.includes('push') || ex.includes('plank') || ex.includes('press')) {
-    angleName = 'Torso & Hip Line';
-    targetAngleRange = '170° - 180° (Straight Plank)';
-    keyAngle = Math.round(178 - (Math.sin(timeSec * 3) < -0.6 ? 22 : 3));
+  } else if (ex.includes('lunge')) {
+    angleName = 'Lead Knee Flexion';
+    targetAngleRange = '85° - 95°';
+    keyAngle = Math.round(170 - cycle * 85);
 
-    if (keyAngle < 165) {
+    if (keyAngle <= 95) {
+      postureState = 'PERFECT';
+      postureScore = 96;
+      feedbackMessage = 'Solid lunge depth! Back knee close to floor.';
+      voiceCue = 'Great lunge form!';
+    } else if (cycle > 0.6) {
+      postureState = 'WARNING';
+      postureScore = 76;
+      feedbackMessage = 'Step wider and drop hips lower.';
+      voiceCue = 'Drop hips lower!';
+    }
+  } else if (ex.includes('plank')) {
+    angleName = 'Spine & Hip Line';
+    targetAngleRange = '170° - 180°';
+    keyAngle = Math.round(176 - (Math.sin(timeSec * 3) < -0.7 ? 22 : 2));
+
+    if (keyAngle < 162) {
       postureState = 'FAULT';
       postureScore = 58;
       feedbackMessage = 'Sagging hips detected! Engage core and tuck pelvis.';
       voiceCue = 'Engage your core, lift your hips!';
-    } else if (keyAngle < 172) {
-      postureState = 'WARNING';
-      postureScore = 80;
-      feedbackMessage = 'Slight elbow flare detected. Keep elbows at 45 degrees.';
-      voiceCue = 'Tuck elbows closer to body.';
     } else {
       postureState = 'PERFECT';
       postureScore = 96;
       feedbackMessage = 'Solid plank line! Core engaged & neck neutral.';
       voiceCue = 'Excellent posture!';
     }
-  } else if (ex.includes('curl') || ex.includes('row') || ex.includes('pull')) {
-    angleName = 'Elbow / Shoulder Swing';
-    targetAngleRange = '< 15° Back Swing';
-    keyAngle = Math.round(12 + Math.sin(timeSec * 4) * 8);
+  } else if (ex.includes('curl') || ex.includes('bicep')) {
+    angleName = 'Elbow Flexion';
+    targetAngleRange = '35° - 160°';
+    keyAngle = Math.round(160 - cycle * 120);
 
-    if (keyAngle > 18) {
-      postureState = 'WARNING';
-      postureScore = 74;
-      feedbackMessage = 'Momentum detected — Avoid swinging torso during lift.';
-      voiceCue = 'Keep your shoulders still, isolate arms!';
+    if (keyAngle < 50) {
+      postureState = 'PERFECT';
+      postureScore = 99;
+      feedbackMessage = 'Peak bicep contraction! Hold top position.';
+      voiceCue = 'Good contraction!';
     } else {
       postureState = 'PERFECT';
-      postureScore = 95;
-      feedbackMessage = 'Strict form! Elbows pinned to torso.';
-      voiceCue = 'Great control!';
+      postureScore = 94;
+      feedbackMessage = 'Keep elbows stationary at sides while curling.';
+      voiceCue = 'Keep curling!';
     }
-  } else {
-    // General posture check
-    const spineTilted = Math.sin(timeSec * 1.5) < -0.8;
-    if (spineTilted) {
-      postureState = 'WARNING';
-      postureScore = 81;
-      feedbackMessage = 'Shoulders slightly uneven — Lift chest and square shoulders.';
-      voiceCue = 'Square your shoulders and stand tall!';
+  } else if (ex.includes('shoulder') || ex.includes('overhead')) {
+    angleName = 'Elbow Lockout';
+    targetAngleRange = '75° - 165°';
+    keyAngle = Math.round(80 + cycle * 85);
+
+    if (keyAngle > 155) {
+      postureState = 'PERFECT';
+      postureScore = 98;
+      feedbackMessage = 'Full extension overhead!';
+      voiceCue = 'Full extension!';
+    } else {
+      postureState = 'PERFECT';
+      postureScore = 92;
+      feedbackMessage = 'Keep core tight and push overhead.';
+      voiceCue = 'Push up overhead!';
+    }
+  } else if (ex.includes('jack') || ex.includes('jumping')) {
+    angleName = 'Arm Elevation';
+    targetAngleRange = '30° - 140°';
+    keyAngle = Math.round(35 + cycle * 105);
+
+    if (keyAngle > 130) {
+      postureState = 'PERFECT';
+      postureScore = 98;
+      feedbackMessage = 'Great arm elevation and wide stance!';
+      voiceCue = 'Great jack!';
     }
   }
 
