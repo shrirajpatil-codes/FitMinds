@@ -419,7 +419,7 @@ export const AppProvider = ({ children }) => {
     setActiveExerciseIndex(prev => Math.min(prev + 1, exerciseList.length - 1));
   };
 
-  const finishWorkout = async (feedback = 'GOOD') => {
+  const finishWorkout = async (feedback = 'GOOD', extraDetails = {}) => {
     const totalPlanExercises = currentPlan?.exercises?.length || 3;
     const completedCount = Math.min(completedExerciseIds.length + 1, totalPlanExercises);
     const summary = {
@@ -429,7 +429,8 @@ export const AppProvider = ({ children }) => {
       totalSetsCompleted: completedCount * 3,
       totalRepsCount: completedCount * 30,
       streakUpdated: progress.currentStreakDays + 1,
-      feedback
+      feedback,
+      ...(typeof extraDetails === 'object' ? extraDetails : {})
     };
     setCompletedSummary(summary);
 

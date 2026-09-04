@@ -17,6 +17,7 @@ import {
 import { Button } from './Button';
 import { Badge } from './Badge';
 import { analyzeExercisePosture, speakPostureFeedback } from '../../utils/postureAnalyzer';
+import { CVExerciseEngine } from '../../utils/cvExerciseEngine';
 
 export const CameraViewfinder = ({
   onRepDetected,
@@ -145,6 +146,16 @@ export const CameraViewfinder = ({
     }
   };
 
+  // CV Exercise Engine Instance Ref
+  const cvEngineRef = useRef(new CVExerciseEngine(activeExerciseName));
+  const lastRepsRef = useRef(0);
+
+  useEffect(() => {
+    if (cvEngineRef.current) {
+      cvEngineRef.current.setExercise(activeExerciseName);
+    }
+  }, [activeExerciseName]);
+
   // Real-Time Posture Correction Loop & Visual Skeleton Mesh
   const startPostureMeshLoop = () => {
     const startTime = Date.now();
@@ -158,9 +169,62 @@ export const CameraViewfinder = ({
       }
 
       const elapsedSec = (Date.now() - startTime) / 1000;
+      const w = canvas.width || 640;
+      const h = canvas.height || 480;
 
-      // Analyze Posture for current exercise
-      const analysis = analyzeExercisePosture(activeExerciseName, {}, elapsedSec);
+      // Generate 33-landmark pose structure (simulated stream/camera movement coordinates)
+      const isSquat = activeExerciseName.toLowerCase().includes('squat');
+      const cycle = (Math.sin(elapsedSec * 2.5) + 1) / 2; // Movement phase cycle (0 to 1)
+
+      // MediaPipe Landmark array indexed 0 to 32
+      const landmarks = new Array(33).fill(null).map(() => ({ x: 0.5, y: 0.5, visibility: 0.9 }));
+
+      // Populate key joints (11: Left Shoulder, 12: Right Shoulder, 13: Left Elbow, 14: Right Elbow, 15: Left Wrist, 16: Right Wrist, 23: Left Hip, 24: Right Hip, 25: Left Knee, 26: Right Knee, 27: Left Ankle, 28: Right Ankle)
+      landmarks[11] = { x: 0.40, y: 0.30, visibility: 0.95 }; // L Shoulder
+      landmarks[12] = { x: 0.60, y: 0.30, visibility: 0.95 }; // R Shoulder
+      landmarks[23] = { x: 0.43, y: 0.55, visibility: 0.95 }; // L Hip
+      landmarks[24] = { x: 0.57, y: 0.55, visibility: 0.95 }; // R Hip
+
+      if (isSquat) {
+        // Squat: Knees flex (y moves down) and ankles stay
+        const kneeY = 0.70 + cycle * 0.12;
+        landmarks[25] = { x: 0.40, y: kneeY, visibility: 0.95 }; // L Knee
+        landmarks[26] = { x: 0.60, y: kneeY, visibility: 0.95 }; // R Knee
+        landmarks[27] = { x: 0.40, y: 0.90, visibility: 0.95 }; // L Ankle
+        landmarks[28] = { x: 0.60, y: 0.90, visibility: 0.95 }; // R Ankle
+      } else {
+        // Bicep Curl: Elbow fixed at side, wrist curls up and down
+        landmarks[13] = { x: 0.38, y: 0.45, visibility: 0.95 }; // L Elbow
+        landmarks[14] = { x: 0.62, y: 0.45, visibility: 0.95 }; // R Elbow
+        const wristY = 0.65 - cycle * 0.38; // 0.65 (extended) -> 0.27 (flexed/up)
+        landmarks[15] = { x: 0.38, y: wristY, visibility: 0.95 }; // L Wrist
+        landmarks[16] = { x: 0.62, y: wristY, visibility: 0.95 }; // R Wrist
+      }
+
+      // Execute CV Engine analysis
+      const cvResult = cvEngineRef.current.update(landmarks);
+
+      // Check rep detection
+      if (cvResult.reps > lastRepsRef.current) {
+        lastRepsRef.current = cvResult.reps;
+        if (onRepDetected) onRepDetected(cvResult);
+      }
+
+      // Formulate display analysis metrics
+      const analysis = {
+        postureState: cvResult.postureState || 'PERFECT',
+        postureScore: cvResult.formScore || 96,
+        feedbackMessage: cvResult.feedback || 'Good form! Keep going.',
+        keyAngle: cvResult.angle || 160,
+        angleName: cvResult.keyAngleName || 'Joint Angle',
+        targetAngleRange: cvResult.targetRange || 'Standard',
+        voiceCue: cvResult.voiceCue || '',
+        reps: cvResult.reps,
+        stage: cvResult.stage,
+        depth: cvResult.depth,
+        rom: cvResult.rom
+      };
+
       setPostureMetrics(analysis);
 
       // Trigger Audio Voice Feedback if warning/fault or voice cue available

@@ -3,6 +3,7 @@ import { useNavigate, Link } from 'react-router-dom';
 import {
   Zap,
   Play,
+  Camera,
   Sliders,
   Sparkles,
   Flame,
@@ -100,6 +101,17 @@ export const DashboardPage = () => {
               Daily Check-in
             </Button>
           </Link>
+          <Button
+            variant="brand"
+            size="sm"
+            leftIcon={Camera}
+            onClick={() => {
+              startWorkoutSession();
+              navigate('/live-counter');
+            }}
+          >
+            Live AI Camera Workout
+          </Button>
           <Button
             variant="primary"
             size="sm"

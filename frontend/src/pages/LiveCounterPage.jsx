@@ -10,25 +10,49 @@ import { useApp } from '../context/AppContext';
 export const LiveCounterPage = () => {
   const navigate = useNavigate();
   const { currentPlan, activeExerciseIndex, finishWorkout } = useApp();
-  const [repCount, setRepCount] = useState(12);
-  const [isCounting, setIsCounting] = useState(true);
-
+  
   const currentExercise = currentPlan.exercises[activeExerciseIndex] || currentPlan.exercises[0];
-  const targetReps = typeof currentExercise.targetReps === 'number' ? currentExercise.targetReps : 15;
+  const [selectedExerciseName, setSelectedExerciseName] = useState(currentExercise?.name || 'Bicep Curl');
+  const [repCount, setRepCount] = useState(0);
+  const [isCounting, setIsCounting] = useState(true);
+  const [lastCvMetrics, setLastCvMetrics] = useState(null);
+
+  const targetReps = typeof currentExercise.targetReps === 'number' ? currentExercise.targetReps : 12;
+
+  const handleRepDetected = (cvResult) => {
+    if (!isCounting) return;
+    if (cvResult && typeof cvResult.reps === 'number') {
+      setRepCount(cvResult.reps);
+      setLastCvMetrics(cvResult);
+    } else {
+      setRepCount(prev => prev + 1);
+    }
+  };
 
   const handleSimulateRep = () => {
     setRepCount(prev => prev + 1);
   };
 
   const handleFinish = () => {
-    finishWorkout('Good', 'Completed with live rep counter');
+    const summaryData = {
+      completedExercisesCount: 1,
+      totalDurationMinutes: 5,
+      totalRepsCount: repCount,
+      exerciseName: selectedExerciseName,
+      formScore: lastCvMetrics?.formScore || 96,
+      depthRating: lastCvMetrics?.depth || 'Good',
+      rom: lastCvMetrics?.rom || 125,
+      feedback: `Completed ${repCount} reps of ${selectedExerciseName} with AI CV Form Tracker`
+    };
+
+    finishWorkout('Good', summaryData);
     navigate('/session-summary');
   };
 
   return (
     <div className="max-w-4xl mx-auto space-y-6">
       {/* Header */}
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
         <Button
           variant="outline"
           size="sm"
@@ -37,9 +61,27 @@ export const LiveCounterPage = () => {
         >
           Back to Manual Workout
         </Button>
-        <Badge variant="brand" icon={Camera}>
-          LIVE AI CAMERA COUNTER
-        </Badge>
+        
+        <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2 bg-slate-900 px-3 py-1.5 rounded-xl border border-slate-800">
+            <span className="text-xs text-slate-400 font-semibold">Select Exercise:</span>
+            <select
+              value={selectedExerciseName}
+              onChange={(e) => {
+                setSelectedExerciseName(e.target.value);
+                setRepCount(0);
+              }}
+              className="bg-slate-950 text-slate-100 text-xs font-bold px-2.5 py-1 rounded-lg border border-slate-700 focus:outline-none focus:border-brand"
+            >
+              <option value="Bicep Curl">Bicep Curl</option>
+              <option value="Squat">Squats</option>
+            </select>
+          </div>
+
+          <Badge variant="brand" icon={Camera}>
+            LIVE AI CAMERA COUNTER
+          </Badge>
+        </div>
       </div>
 
       {/* Scope Reminder Banner */}
@@ -55,19 +97,18 @@ export const LiveCounterPage = () => {
         {/* Camera Feed Container (2 cols) */}
         <div className="md:col-span-2">
           <CameraViewfinder
-            activeExerciseName={currentExercise.name}
+            activeExerciseName={selectedExerciseName}
             targetReps={targetReps}
-            onRepDetected={() => setRepCount(prev => prev + 1)}
+            onRepDetected={handleRepDetected}
           />
         </div>
-
 
         {/* Rep Counter Details Sidebar (1 col) */}
         <div className="space-y-4">
           <Card variant="highlighted" className="p-6 text-center space-y-4">
             <div>
-              <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">CURRENT MOVEMENT</span>
-              <h3 className="text-lg font-bold text-slate-100 mt-0.5">{currentExercise.name}</h3>
+              <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">SELECTED MOVEMENT</span>
+              <h3 className="text-lg font-bold text-slate-100 mt-0.5">{selectedExerciseName}</h3>
             </div>
 
             {/* Rep Counter Box */}
@@ -109,7 +150,7 @@ export const LiveCounterPage = () => {
                 leftIcon={CheckCircle}
                 onClick={handleFinish}
               >
-                Finish Workout
+                Finish Workout & Get Summary
               </Button>
             </div>
           </Card>
@@ -119,7 +160,7 @@ export const LiveCounterPage = () => {
             <div className="flex items-center justify-between">
               <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">POSTURE COACH</span>
               <span className="text-[10px] font-bold text-emerald-400 bg-emerald-950/60 px-2 py-0.5 rounded border border-emerald-800">
-                ACTIVE
+                CV ENGINE ACTIVE
               </span>
             </div>
             <p className="text-xs text-slate-300 font-medium">
