@@ -14,21 +14,21 @@ export const Button = React.forwardRef(({
   type = 'button',
   ...props
 }, ref) => {
-  const baseStyles = "inline-flex items-center justify-center font-medium transition-all duration-200 focus:outline-none focus-visible:ring-2 focus-visible:ring-brand disabled:opacity-50 disabled:cursor-not-allowed active:scale-[0.98]";
+  const baseStyles = "inline-flex items-center justify-center font-bold tracking-wide transition-all duration-200 focus:outline-none focus-visible:ring-2 focus-visible:ring-brand disabled:opacity-50 disabled:cursor-not-allowed active:scale-[0.97]";
 
   const variants = {
-    primary: "bg-brand text-slate-950 hover:bg-cyan-300 shadow-brand-glow font-semibold",
-    secondary: "bg-slate-800 text-slate-100 hover:bg-slate-700 border border-slate-700",
-    outline: "bg-transparent text-slate-200 border border-slate-700 hover:border-slate-500 hover:bg-slate-800/50",
+    primary: "bg-[#00f2ff] text-slate-950 hover:bg-[#33f4ff] shadow-[0_0_20px_rgba(0,242,255,0.3)] hover:shadow-[0_0_25px_rgba(0,242,255,0.5)] font-extrabold border border-[#00f2ff]/50",
+    secondary: "bg-slate-900/80 backdrop-blur-md text-slate-100 hover:bg-slate-800 border border-slate-700/80 hover:border-slate-500",
+    outline: "bg-slate-950/50 backdrop-blur-md text-slate-200 border border-slate-700/80 hover:border-[#00f2ff]/60 hover:text-[#00f2ff] hover:bg-[#00f2ff]/10 hover:shadow-[0_0_15px_rgba(0,242,255,0.15)]",
     ghost: "bg-transparent text-slate-300 hover:bg-slate-800/60 hover:text-slate-100",
-    danger: "bg-status-danger text-white hover:bg-red-600 shadow-sm",
-    ai: "bg-gradient-to-r from-ai-purple to-indigo-600 text-white hover:from-purple-500 hover:to-indigo-500 shadow-ai-glow"
+    danger: "bg-rose-600 text-white hover:bg-rose-500 shadow-sm border border-rose-500/50",
+    ai: "bg-gradient-to-r from-purple-600 via-indigo-600 to-brand text-slate-950 hover:from-purple-500 hover:to-brand shadow-[0_0_20px_rgba(168,85,247,0.3)] font-extrabold"
   };
 
   const sizes = {
-    sm: "px-3 py-1.5 text-xs rounded-lg gap-1.5",
+    sm: "px-3 py-1.5 text-xs rounded-xl gap-1.5",
     md: "px-4 py-2 text-sm rounded-xl gap-2",
-    lg: "px-5 py-2.5 text-base rounded-xl gap-2.5"
+    lg: "px-5 py-2.5 text-base rounded-2xl gap-2.5"
   };
 
   return (

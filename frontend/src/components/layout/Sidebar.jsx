@@ -52,19 +52,19 @@ const navGroups = [
 export const Sidebar = ({ className }) => {
   return (
     <aside className={cn(
-      "w-64 bg-slate-900 border-r border-slate-800 flex flex-col justify-between h-screen sticky top-0 select-none z-30 shrink-0",
+      "w-64 bg-[#0a0c1a]/90 backdrop-blur-2xl border-r border-slate-800/80 flex flex-col justify-between h-screen sticky top-0 select-none z-30 shrink-0 shadow-[10px_0_30px_rgba(0,0,0,0.5)]",
       className
     )}>
       <div>
         {/* Brand Header */}
-        <div className="h-16 px-6 flex items-center gap-3 border-b border-slate-800">
-          <div className="w-8 h-8 rounded-xl bg-gradient-to-tr from-brand-blue to-brand flex items-center justify-center text-slate-950 font-bold shadow-brand-glow">
+        <div className="h-16 px-6 flex items-center gap-3 border-b border-slate-800/80">
+          <div className="w-8 h-8 rounded-xl bg-gradient-to-tr from-brand-blue via-[#00f2ff] to-emerald-400 flex items-center justify-center text-slate-950 font-bold shadow-[0_0_20px_rgba(0,242,255,0.4)]">
             <Zap className="w-5 h-5 fill-slate-950 stroke-none" />
           </div>
           <div className="flex flex-col">
             <div className="flex items-center gap-1.5">
               <span className="font-extrabold text-base tracking-wider text-slate-100">FITMIRROR</span>
-              <span className="px-1.5 py-0.2 text-[9px] font-bold bg-brand/20 text-brand rounded border border-brand/30">
+              <span className="px-1.5 py-0.2 text-[9px] font-extrabold bg-[#00f2ff]/20 text-[#00f2ff] rounded border border-[#00f2ff]/40 shadow-[0_0_10px_rgba(0,242,255,0.3)]">
                 AI
               </span>
             </div>
@@ -76,7 +76,7 @@ export const Sidebar = ({ className }) => {
         <div className="p-4 space-y-6 overflow-y-auto max-h-[calc(100vh-8rem)]">
           {navGroups.map((group) => (
             <div key={group.title} className="space-y-1.5">
-              <h4 className="px-3 text-[10px] font-bold text-slate-500 tracking-wider uppercase">
+              <h4 className="px-3 text-[10px] font-extrabold text-slate-500 tracking-widest uppercase">
                 {group.title}
               </h4>
               <nav className="space-y-1">
@@ -87,10 +87,10 @@ export const Sidebar = ({ className }) => {
                       key={item.path}
                       to={item.path}
                       className={({ isActive }) => cn(
-                        "flex items-center justify-between px-3 py-2 text-xs font-medium rounded-xl transition-all duration-200 group",
+                        "flex items-center justify-between px-3 py-2 text-xs font-semibold rounded-xl transition-all duration-200 group",
                         isActive
-                          ? "bg-slate-800 text-brand border border-slate-700/60 shadow-sm"
-                          : "text-slate-400 hover:text-slate-200 hover:bg-slate-800/40"
+                          ? "bg-[#00f2ff]/10 text-[#00f2ff] border border-[#00f2ff]/30 shadow-[0_0_15px_rgba(0,242,255,0.15)]"
+                          : "text-slate-400 hover:text-slate-100 hover:bg-slate-800/40"
                       )}
                     >
                       <div className="flex items-center gap-2.5">
@@ -98,7 +98,7 @@ export const Sidebar = ({ className }) => {
                         <span>{item.name}</span>
                       </div>
                       {item.badge && (
-                        <span className="px-1.5 py-0.5 text-[9px] font-semibold bg-purple-950 text-purple-300 border border-purple-800/50 rounded-full flex items-center gap-0.5">
+                        <span className="px-1.5 py-0.5 text-[9px] font-bold bg-purple-500/20 text-purple-300 border border-purple-500/30 rounded-full flex items-center gap-0.5 shadow-[0_0_10px_rgba(168,85,247,0.2)]">
                           <Sparkles className="w-2.5 h-2.5" />
                           {item.badge}
                         </span>
@@ -113,11 +113,11 @@ export const Sidebar = ({ className }) => {
       </div>
 
       {/* Sidebar Footer AI Insight Indicator */}
-      <div className="p-4 border-t border-slate-800">
-        <div className="p-3 rounded-xl bg-purple-950/30 border border-purple-900/40 flex items-start gap-2.5">
-          <Sparkles className="w-4 h-4 text-purple-400 shrink-0 mt-0.5" />
+      <div className="p-4 border-t border-slate-800/80">
+        <div className="p-3 rounded-xl bg-purple-950/40 border border-purple-800/40 backdrop-blur-md flex items-start gap-2.5 shadow-[0_0_20px_rgba(168,85,247,0.15)]">
+          <Sparkles className="w-4 h-4 text-purple-400 shrink-0 mt-0.5 animate-pulse" />
           <div className="text-[11px]">
-            <p className="font-semibold text-purple-200">Adaptive Engine</p>
+            <p className="font-bold text-purple-200">Adaptive Engine</p>
             <p className="text-slate-400 mt-0.5 text-[10px]">Monitoring workload & consistency</p>
           </div>
         </div>

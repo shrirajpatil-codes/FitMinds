@@ -3,7 +3,6 @@ import { useNavigate, Link } from 'react-router-dom';
 import {
   Zap,
   Play,
-  Camera,
   Sliders,
   Sparkles,
   Flame,
@@ -15,9 +14,10 @@ import {
   Calendar,
   BookOpen,
   Brain,
-  Check,
   TrendingUp,
-  RotateCcw
+  RotateCcw,
+  ShieldCheck,
+  Cpu
 } from 'lucide-react';
 import { Button } from '../components/common/Button';
 import { Card } from '../components/common/Card';
@@ -82,16 +82,16 @@ export const DashboardPage = () => {
   return (
     <div className="space-y-6">
       {/* Top Welcome Header */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 pb-2 border-b border-slate-800">
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 pb-4 border-b border-slate-800/80">
         <div>
           <div className="flex items-center gap-3">
-            <h2 className="text-2xl font-bold text-slate-100">Hello, {userProfile.name}</h2>
+            <h2 className="text-2xl font-black text-slate-100 tracking-tight">Hello, {userProfile.name}</h2>
             <Badge variant={readinessVariant} size="lg">
               {dailyContext.readiness}
             </Badge>
           </div>
           <p className="text-xs text-slate-400 mt-1">
-            FITMINDS adaptive ML engine personalized today's fitness plan for your student schedule.
+            FITMIRROR adaptive ML engine personalized today's fitness plan for your student schedule.
           </p>
         </div>
 
@@ -114,37 +114,37 @@ export const DashboardPage = () => {
         {/* Left Column: ML Recommendation & Context (2 cols on LG) */}
         <div className="lg:col-span-2 space-y-6">
           
-          {/* STEP 5: FITMINDS Real ML-Based Workout Recommendation Card */}
-          <div className="relative rounded-2xl p-6 bg-gradient-to-br from-indigo-950/80 via-slate-900 to-purple-950/70 border border-indigo-500/30 shadow-xl shadow-indigo-950/20">
+          {/* FITMIRROR Real ML-Based Workout Recommendation Card */}
+          <div className="relative rounded-2xl p-6 bg-gradient-to-br from-[#101221]/90 via-[#13172a]/80 to-[#1e1b4b]/50 border border-indigo-500/30 backdrop-blur-xl shadow-[0_0_30px_rgba(0,242,255,0.12)]">
             <div className="flex flex-wrap items-center justify-between gap-2 mb-4">
-              <div className="flex items-center gap-2">
-                <div className="p-2 rounded-xl bg-indigo-500/20 border border-indigo-500/40 text-indigo-400">
+              <div className="flex items-center gap-3">
+                <div className="p-2.5 rounded-xl bg-indigo-500/20 border border-indigo-500/40 text-[#00f2ff] shadow-[0_0_15px_rgba(0,242,255,0.2)]">
                   <Brain className="w-5 h-5 animate-pulse" />
                 </div>
                 <div>
                   <div className="flex items-center gap-2">
-                    <span className="text-[11px] font-bold text-indigo-400 uppercase tracking-wider">
-                      FITMINDS ML ENGINE
+                    <span className="text-[11px] font-extrabold text-[#00f2ff] uppercase tracking-widest">
+                      FITMIRROR ML ENGINE
                     </span>
-                    <span className="text-[10px] px-2 py-0.5 rounded-full bg-indigo-500/20 text-indigo-300 font-mono">
+                    <span className="text-[10px] px-2 py-0.5 rounded-full bg-indigo-500/20 text-indigo-300 font-mono border border-indigo-500/30">
                       {mlRecommendation?.modelVersion || 'workout-recommender-v1'}
                     </span>
                   </div>
-                  <h3 className="text-xl font-extrabold text-slate-100 mt-0.5">
+                  <h3 className="text-xl font-extrabold text-slate-100 mt-0.5 tracking-tight">
                     {recData ? recData.title : "15-Min Express Full Body"}
                   </h3>
                 </div>
               </div>
 
               <div className="flex items-center gap-2">
-                <div className="px-3 py-1.5 rounded-xl bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 text-xs font-bold flex items-center gap-1.5">
+                <div className="px-3 py-1.5 rounded-xl bg-emerald-500/15 border border-emerald-500/30 text-emerald-400 text-xs font-bold flex items-center gap-1.5 shadow-[0_0_12px_rgba(16,185,129,0.2)]">
                   <TrendingUp className="w-3.5 h-3.5" />
                   {recScore}% Match Score
                 </div>
                 <button
                   onClick={fetchMlRecommendation}
                   disabled={isLoadingMlRec}
-                  className="p-2 rounded-xl bg-slate-800/80 hover:bg-slate-700 text-slate-300 transition-colors"
+                  className="p-2 rounded-xl bg-slate-900/80 hover:bg-slate-800 border border-slate-700/80 text-slate-300 transition-colors"
                   title="Re-run ML Inference Engine"
                 >
                   <RotateCcw className={`w-4 h-4 ${isLoadingMlRec ? 'animate-spin' : ''}`} />
@@ -154,13 +154,13 @@ export const DashboardPage = () => {
 
             {/* Recommendation Factors */}
             <div className="mb-4">
-              <span className="text-[11px] font-medium text-slate-400 block mb-2">
+              <span className="text-[11px] font-semibold text-slate-400 block mb-2 tracking-wide uppercase">
                 Why ML selected this workout for you today:
               </span>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                 {recFactors.map((factor, idx) => (
-                  <div key={idx} className="flex items-center gap-2 text-xs text-slate-300 bg-slate-900/60 p-2.5 rounded-xl border border-slate-800">
-                    <CheckCircle className="w-3.5 h-3.5 text-indigo-400 shrink-0" />
+                  <div key={idx} className="flex items-center gap-2 text-xs text-slate-300 bg-[#0a0c1a]/70 p-2.5 rounded-xl border border-slate-800/80 backdrop-blur-md">
+                    <CheckCircle className="w-3.5 h-3.5 text-[#00f2ff] shrink-0" />
                     <span>{factor}</span>
                   </div>
                 ))}
@@ -168,34 +168,34 @@ export const DashboardPage = () => {
             </div>
 
             {/* Workout Details Row */}
-            <div className="grid grid-cols-3 gap-3 my-4 p-3 rounded-xl bg-slate-900/90 border border-slate-800 text-xs">
+            <div className="grid grid-cols-3 gap-3 my-4 p-3.5 rounded-xl bg-[#0a0c1a]/80 border border-slate-800/80 text-xs backdrop-blur-md">
               <div>
-                <span className="text-slate-400">Duration</span>
-                <p className="font-semibold text-slate-100 mt-0.5">{recData?.durationMinutes || 15} Minutes</p>
+                <span className="text-slate-400 font-medium">Duration</span>
+                <p className="font-bold text-slate-100 mt-0.5">{recData?.durationMinutes || 15} Minutes</p>
               </div>
               <div>
-                <span className="text-slate-400">Difficulty</span>
-                <p className="font-semibold text-slate-100 mt-0.5">{recData?.difficulty || 'BEGINNER'}</p>
+                <span className="text-slate-400 font-medium">Difficulty</span>
+                <p className="font-bold text-slate-100 mt-0.5">{recData?.difficulty || 'BEGINNER'}</p>
               </div>
               <div>
-                <span className="text-slate-400">Equipment</span>
-                <p className="font-semibold text-slate-100 mt-0.5">{recData?.equipment || 'NONE'}</p>
+                <span className="text-slate-400 font-medium">Equipment</span>
+                <p className="font-bold text-slate-100 mt-0.5">{recData?.equipment || 'NONE'}</p>
               </div>
             </div>
 
             {/* Candidate Alternatives */}
             {mlRecommendation?.alternatives?.length > 0 && (
               <div className="mb-5 pt-3 border-t border-slate-800/80">
-                <span className="text-[11px] text-slate-400 block mb-2">Alternative ML Ranked Choices:</span>
+                <span className="text-[11px] text-slate-400 block mb-2 font-medium">Alternative ML Ranked Choices:</span>
                 <div className="flex flex-wrap gap-2">
                   {mlRecommendation.alternatives.map((alt) => (
                     <button
                       key={alt.id}
                       onClick={() => handleAdoptMlRecommendation(alt)}
-                      className="px-3 py-1.5 rounded-lg bg-slate-900 hover:bg-indigo-950/60 border border-slate-800 hover:border-indigo-500/40 text-xs text-slate-300 transition-all flex items-center gap-2"
+                      className="px-3 py-1.5 rounded-xl bg-[#0a0c1a]/80 hover:bg-indigo-950/60 border border-slate-800 hover:border-[#00f2ff]/40 text-xs text-slate-300 transition-all flex items-center gap-2"
                     >
                       <span>{alt.title} ({alt.durationMinutes}m)</span>
-                      <span className="text-[10px] text-indigo-400 font-bold">{Math.round(alt.score * 100)}%</span>
+                      <span className="text-[10px] text-[#00f2ff] font-bold">{Math.round(alt.score * 100)}%</span>
                     </button>
                   ))}
                 </div>
@@ -228,45 +228,45 @@ export const DashboardPage = () => {
 
           {/* Today's Context Card */}
           <Card variant="default">
-            <div className="flex items-center justify-between mb-4 pb-3 border-b border-slate-800">
-              <h3 className="text-sm font-semibold text-slate-200 flex items-center gap-2">
-                <Sparkles className="w-4 h-4 text-brand" />
+            <div className="flex items-center justify-between mb-4 pb-3 border-b border-slate-800/80">
+              <h3 className="text-sm font-bold text-slate-200 flex items-center gap-2 tracking-wide">
+                <Sparkles className="w-4 h-4 text-[#00f2ff]" />
                 Today's Student Context
               </h3>
               <span className="text-[10px] text-slate-400 font-mono">{dailyContext.lastCheckinTime}</span>
             </div>
 
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-4">
-              <div className="p-3 rounded-xl bg-slate-900 border border-slate-800">
+              <div className="p-3 rounded-xl bg-[#0a0c1a]/70 border border-slate-800/80 backdrop-blur-md">
                 <div className="flex items-center gap-1.5 text-slate-400 text-xs mb-1">
-                  <Clock className="w-3.5 h-3.5 text-brand" />
+                  <Clock className="w-3.5 h-3.5 text-[#00f2ff]" />
                   Time Available
                 </div>
-                <span className="text-sm font-bold text-slate-100">{dailyContext.availableTimeMinutes} min</span>
+                <span className="text-sm font-extrabold text-slate-100">{dailyContext.availableTimeMinutes} min</span>
               </div>
 
-              <div className="p-3 rounded-xl bg-slate-900 border border-slate-800">
+              <div className="p-3 rounded-xl bg-[#0a0c1a]/70 border border-slate-800/80 backdrop-blur-md">
                 <div className="flex items-center gap-1.5 text-slate-400 text-xs mb-1">
                   <Battery className="w-3.5 h-3.5 text-emerald-400" />
                   Energy Level
                 </div>
-                <span className="text-sm font-bold text-slate-100">{dailyContext.energyLevel} / 5</span>
+                <span className="text-sm font-extrabold text-slate-100">{dailyContext.energyLevel} / 5</span>
               </div>
 
-              <div className="p-3 rounded-xl bg-slate-900 border border-slate-800">
+              <div className="p-3 rounded-xl bg-[#0a0c1a]/70 border border-slate-800/80 backdrop-blur-md">
                 <div className="flex items-center gap-1.5 text-slate-400 text-xs mb-1">
                   <TrendingUp className="w-3.5 h-3.5 text-indigo-400" />
                   Body BMI
                 </div>
-                <span className="text-sm font-bold text-slate-100">{userProfile.bmi || 22.8} <span className="text-[10px] font-normal text-indigo-300">({userProfile.bmiCategory || 'Normal'})</span></span>
+                <span className="text-sm font-extrabold text-slate-100">{userProfile.bmi || 22.8} <span className="text-[10px] font-normal text-indigo-300">({userProfile.bmiCategory || 'Normal'})</span></span>
               </div>
 
-              <div className="p-3 rounded-xl bg-slate-900 border border-slate-800">
+              <div className="p-3 rounded-xl bg-[#0a0c1a]/70 border border-slate-800/80 backdrop-blur-md">
                 <div className="flex items-center gap-1.5 text-slate-400 text-xs mb-1">
                   <BookOpen className="w-3.5 h-3.5 text-purple-400" />
                   Academic Load
                 </div>
-                <span className="text-sm font-bold text-slate-100">{dailyContext.academicLoad}</span>
+                <span className="text-sm font-extrabold text-slate-100">{dailyContext.academicLoad}</span>
               </div>
             </div>
 
@@ -281,13 +281,13 @@ export const DashboardPage = () => {
 
         {/* Right Column: AI Insight, Consistency, Strategy Health */}
         <div className="space-y-6">
-          {/* FITMINDS AI Insight Card */}
+          {/* FITMIRROR AI Insight Card */}
           <Card variant="aiInsight" className="space-y-3">
             <div className="flex items-center justify-between">
               <Badge variant="ai" icon={Sparkles}>
                 FITMIRROR AI COACH
               </Badge>
-              <span className="text-[10px] text-purple-300">Gemini Explanation</span>
+              <span className="text-[10px] text-purple-300 font-medium">Gemini Intelligence</span>
             </div>
 
             <p className="text-xs font-medium text-purple-200 leading-relaxed">
@@ -322,7 +322,7 @@ export const DashboardPage = () => {
                 subtitle="Sessions done"
               />
             </div>
-            <div className="text-[11px] text-slate-400 p-2.5 rounded-lg bg-slate-900 border border-slate-800">
+            <div className="text-[11px] text-slate-400 p-2.5 rounded-xl bg-[#0a0c1a]/70 border border-slate-800/80 backdrop-blur-md">
               Total sessions completed: <strong className="text-slate-200">{progress.totalSessionsCompleted}</strong> | Modified: <strong className="text-slate-200">{progress.sessionsModifiedCount}</strong>
             </div>
           </Card>
@@ -330,7 +330,7 @@ export const DashboardPage = () => {
           {/* Strategy Health Compact Card */}
           <Card variant="default">
             <div className="flex items-center justify-between mb-2">
-              <span className="text-xs font-semibold text-slate-300 flex items-center gap-1.5">
+              <span className="text-xs font-bold text-slate-300 flex items-center gap-1.5 tracking-wide">
                 <Activity className="w-4 h-4 text-emerald-400" />
                 STRATEGY HEALTH
               </span>

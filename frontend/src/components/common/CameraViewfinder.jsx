@@ -531,14 +531,14 @@ export const CameraViewfinder = ({
       if (showHudOverlay) {
         const time = Date.now() * 0.003;
 
-        let strokeColor = 'rgba(16, 185, 129, 0.85)';
-        let glowColor = '#10b981';
-        let accentColor = 'rgba(16, 185, 129, 0.3)';
+        let strokeColor = 'rgba(0, 242, 255, 0.90)';
+        let glowColor = '#00f2ff';
+        let accentColor = 'rgba(0, 242, 255, 0.35)';
 
         if (analysis.postureState === 'WARNING') {
           strokeColor = 'rgba(245, 158, 11, 0.95)';
           glowColor = '#f59e0b';
-          accentColor = 'rgba(245, 158, 11, 0.3)';
+          accentColor = 'rgba(245, 158, 11, 0.35)';
         } else if (analysis.postureState === 'FAULT') {
           strokeColor = 'rgba(244, 63, 94, 0.95)';
           glowColor = '#f43f5e';

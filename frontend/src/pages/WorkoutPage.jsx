@@ -38,7 +38,6 @@ export const WorkoutPage = () => {
   const totalExercises = currentPlan.exercises.length;
   const isLastExercise = activeExerciseIndex === totalExercises - 1 && activeSet === currentExercise.sets;
 
-
   // Rest Timer Countdown Simulation
   useEffect(() => {
     let interval = null;
@@ -52,7 +51,7 @@ export const WorkoutPage = () => {
 
   const handleCompleteSet = () => {
     setRestSeconds(currentExercise.restSeconds || 30);
-    if (isLastExercise || activeExerciseIndex >= totalExercises - 1 && activeSet >= currentExercise.sets) {
+    if (isLastExercise || (activeExerciseIndex >= totalExercises - 1 && activeSet >= currentExercise.sets)) {
       finishWorkout('Good', 'Completed smoothly');
       navigate('/session-summary');
     } else {
@@ -71,10 +70,10 @@ export const WorkoutPage = () => {
   return (
     <div className="max-w-3xl mx-auto space-y-6">
       {/* Top Session Status Bar */}
-      <div className="flex items-center justify-between pb-2 border-b border-slate-800">
+      <div className="flex items-center justify-between pb-3 border-b border-slate-800/80">
         <div>
-          <span className="text-[10px] font-bold text-brand uppercase tracking-wider">ACTIVE WORKOUT</span>
-          <h2 className="text-lg font-bold text-slate-100">{currentPlan.title}</h2>
+          <span className="text-[10px] font-extrabold text-[#00f2ff] uppercase tracking-widest">ACTIVE WORKOUT</span>
+          <h2 className="text-lg font-black text-slate-100 tracking-tight">{currentPlan.title}</h2>
         </div>
         <div className="flex items-center gap-2">
           <Button
@@ -104,38 +103,38 @@ export const WorkoutPage = () => {
           <Badge variant="brand" size="md">
             EXERCISE {activeExerciseIndex + 1} OF {totalExercises}
           </Badge>
-          <h1 className="text-3xl font-extrabold text-slate-100 tracking-tight">
+          <h1 className="text-3xl font-black text-slate-100 tracking-tight">
             {currentExercise.name}
           </h1>
-          <p className="text-xs text-slate-400 max-w-md mx-auto">
+          <p className="text-xs text-slate-400 max-w-md mx-auto leading-relaxed">
             {currentExercise.instructions}
           </p>
         </div>
 
         {/* Set & Rep Focus Display */}
         <div className="grid grid-cols-2 gap-4 max-w-md mx-auto">
-          <div className="p-4 rounded-2xl bg-slate-900 border border-slate-800">
-            <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">SET</span>
-            <div className="text-2xl font-black text-brand mt-1">
+          <div className="p-4 rounded-2xl bg-[#0a0c1a]/90 border border-slate-800/80 shadow-[0_0_15px_rgba(0,0,0,0.3)]">
+            <span className="text-[10px] font-extrabold text-slate-500 uppercase tracking-widest">SET</span>
+            <div className="text-3xl font-black text-[#00f2ff] mt-1 tracking-tight drop-shadow-[0_0_10px_rgba(0,242,255,0.3)]">
               {activeSet} <span className="text-sm font-normal text-slate-400">/ {currentExercise.sets}</span>
             </div>
           </div>
 
-          <div className="p-4 rounded-2xl bg-slate-900 border border-slate-800">
-            <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">TARGET REPS</span>
-            <div className="text-2xl font-black text-slate-100 mt-1">
+          <div className="p-4 rounded-2xl bg-[#0a0c1a]/90 border border-slate-800/80 shadow-[0_0_15px_rgba(0,0,0,0.3)]">
+            <span className="text-[10px] font-extrabold text-slate-500 uppercase tracking-widest">TARGET REPS</span>
+            <div className="text-3xl font-black text-slate-100 mt-1 tracking-tight">
               {currentExercise.reps}
             </div>
           </div>
         </div>
 
         {/* Rest Timer Card */}
-        <div className="p-4 rounded-2xl bg-slate-900/60 border border-slate-800/80 max-w-xs mx-auto flex items-center justify-between">
-          <div className="flex items-center gap-2 text-xs text-slate-400">
-            <Clock className="w-4 h-4 text-brand" />
+        <div className="p-4 rounded-2xl bg-[#0a0c1a]/60 border border-slate-800/80 max-w-xs mx-auto flex items-center justify-between backdrop-blur-md">
+          <div className="flex items-center gap-2 text-xs text-slate-400 font-semibold">
+            <Clock className="w-4 h-4 text-[#00f2ff]" />
             <span>Rest Interval</span>
           </div>
-          <span className="font-mono text-lg font-bold text-slate-200">{formattedRestTime}</span>
+          <span className="font-mono text-lg font-extrabold text-slate-100">{formattedRestTime}</span>
         </div>
 
         {/* Primary Workout Controls */}
@@ -170,12 +169,12 @@ export const WorkoutPage = () => {
 
       {/* Remaining Exercises List Preview */}
       <div className="space-y-2">
-        <h4 className="text-xs font-semibold text-slate-400 uppercase tracking-wider">Upcoming Exercises</h4>
+        <h4 className="text-xs font-extrabold text-slate-400 uppercase tracking-widest">Upcoming Exercises</h4>
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
           {currentPlan.exercises.slice(activeExerciseIndex + 1).map(ex => (
-            <div key={ex.id} className="p-3 rounded-xl bg-slate-900 border border-slate-800 text-xs flex items-center justify-between">
-              <span className="font-medium text-slate-300">{ex.name}</span>
-              <span className="text-slate-500">{ex.sets} × {ex.reps}</span>
+            <div key={ex.id} className="p-3.5 rounded-xl bg-[#101221]/70 border border-slate-800/80 text-xs flex items-center justify-between hover:border-[#00f2ff]/30 transition-colors">
+              <span className="font-bold text-slate-200">{ex.name}</span>
+              <span className="text-slate-400 font-medium">{ex.sets} × {ex.reps}</span>
             </div>
           ))}
         </div>

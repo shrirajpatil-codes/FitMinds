@@ -15,13 +15,13 @@ export const ProgressPage = () => {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-2 border-b border-slate-800">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-3 border-b border-slate-800/80">
         <div>
-          <h2 className="text-2xl font-bold text-slate-100 flex items-center gap-2">
-            <TrendingUp className="w-6 h-6 text-brand" />
+          <h2 className="text-2xl font-black text-slate-100 flex items-center gap-2.5 tracking-tight">
+            <TrendingUp className="w-6 h-6 text-[#00f2ff]" />
             Progress & Consistency Analytics
           </h2>
-          <p className="text-xs text-slate-400">
+          <p className="text-xs text-slate-400 mt-1">
             FitMirror AI tracks your habit retention and workload adaptability over time.
           </p>
         </div>
@@ -63,27 +63,27 @@ export const ProgressPage = () => {
       {/* Main Weekly Trend Visual Representation */}
       <Card variant="default" className="p-6 space-y-6">
         <div className="flex items-center justify-between">
-          <h3 className="text-sm font-bold text-slate-200 uppercase tracking-wider">Weekly Workout Timeline</h3>
-          <span className="text-xs text-slate-400">This Week</span>
+          <h3 className="text-xs font-extrabold text-slate-300 uppercase tracking-widest">Weekly Workout Timeline</h3>
+          <span className="text-xs text-[#00f2ff] font-semibold">This Week</span>
         </div>
 
         <div className="grid grid-cols-7 gap-2 text-center">
-          {progress.weeklyTrend.map((day, idx) => (
+          {progress.weeklyTrend.map((day) => (
             <div
               key={day.day}
               className={`p-3.5 rounded-xl border flex flex-col items-center gap-2 transition-all ${
                 day.completed
-                  ? 'border-emerald-800/60 bg-emerald-950/30 text-emerald-300'
-                  : 'border-slate-800 bg-slate-900/60 text-slate-500'
+                  ? 'border-emerald-500/40 bg-emerald-500/10 text-emerald-300 shadow-[0_0_15px_rgba(16,185,129,0.15)]'
+                  : 'border-slate-800/80 bg-[#0a0c1a]/60 text-slate-500'
               }`}
             >
-              <span className="text-xs font-bold uppercase">{day.day}</span>
-              <div className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold ${
-                day.completed ? 'bg-emerald-500 text-slate-950' : 'bg-slate-800 text-slate-500'
+              <span className="text-xs font-extrabold uppercase">{day.day}</span>
+              <div className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-extrabold ${
+                day.completed ? 'bg-emerald-400 text-slate-950 shadow-[0_0_10px_#10b981]' : 'bg-slate-800 text-slate-500'
               }`}>
                 {day.completed ? '✓' : '-'}
               </div>
-              <span className="text-[10px] font-mono">{day.duration ? `${day.duration}m` : '0m'}</span>
+              <span className="text-[10px] font-mono font-semibold">{day.duration ? `${day.duration}m` : '0m'}</span>
             </div>
           ))}
         </div>
@@ -95,15 +95,15 @@ export const ProgressPage = () => {
           <Badge variant="ai" icon={Sparkles}>
             WHAT'S CHANGING?
           </Badge>
-          <span className="text-xs text-purple-300">Habit Pattern Learning</span>
+          <span className="text-xs text-cyan-300 font-semibold">Habit Pattern Learning</span>
         </div>
 
-        <p className="text-sm font-semibold text-purple-100 leading-relaxed">
+        <p className="text-sm font-bold text-slate-100 leading-relaxed">
           "{progress.insightNote}"
         </p>
 
         <Alert variant="ai">
-          FitMirror AI uses these findings to prevent future dropouts during exam periods.
+          FitMirror AI uses these findings to prevent future dropouts during high stress/exam periods.
         </Alert>
 
         <div className="flex items-center justify-end pt-2">
