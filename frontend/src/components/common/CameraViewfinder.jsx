@@ -565,111 +565,74 @@ export const CameraViewfinder = ({
         const lAnkle = lmPx(27);
         const rAnkle = lmPx(28);
 
-        // Dynamic Bounding Box around tracked human
-        const boxX = Math.min(lShoulder.x, lWrist.x, lAnkle.x) - 30;
-        const boxY = head.y - 30;
-        const boxWidth = Math.max(rShoulder.x, rWrist.x, rAnkle.x) - boxX + 30;
-        const boxHeight = Math.max(lAnkle.y, rAnkle.y) - boxY + 30;
-
-        ctx.strokeStyle = strokeColor;
-        ctx.lineWidth = 2;
-        ctx.setLineDash([8, 6]);
-        ctx.strokeRect(boxX, boxY, boxWidth, boxHeight);
-        ctx.setLineDash([]);
-
-        const cornerLen = 20;
-        ctx.strokeStyle = glowColor;
-        ctx.lineWidth = 3.5;
-
-        // Animated Corner Brackets
-        ctx.beginPath();
-        ctx.moveTo(boxX, boxY + cornerLen);
-        ctx.lineTo(boxX, boxY);
-        ctx.lineTo(boxX + cornerLen, boxY);
-
-        ctx.moveTo(boxX + boxWidth - cornerLen, boxY);
-        ctx.lineTo(boxX + boxWidth, boxY);
-        ctx.lineTo(boxX + boxWidth, boxY + cornerLen);
-
-        ctx.moveTo(boxX, boxY + boxHeight - cornerLen);
-        ctx.lineTo(boxX, boxY + boxHeight);
-        ctx.lineTo(boxX + cornerLen, boxY + boxHeight);
-
-        ctx.moveTo(boxX + boxWidth - cornerLen, boxY + boxHeight);
-        ctx.lineTo(boxX + boxWidth, boxY + boxHeight);
-        ctx.lineTo(boxX + boxWidth, boxY + boxHeight - cornerLen);
-        ctx.stroke();
-
-        // Draw Dynamic Skeleton Mesh Lines (Exact MediaPipe connections matching CV_model/main.py)
+        // Draw MediaPipe Skeleton Connections (Matching ml/CV_model/main.py connections)
         const connections = [
-          [11, 12], [11, 23], [12, 24], [23, 24], // Torso
-          [11, 13], [13, 15],                    // Left Arm
-          [12, 14], [14, 16],                    // Right Arm
-          [23, 25], [25, 27],                    // Left Leg
-          [24, 26], [26, 28]                     // Right Leg
+          // Face Connections
+          [0, 1], [1, 2], [2, 3], [3, 7],
+          [0, 4], [4, 5], [5, 6], [6, 8],
+          // Torso Connections
+          [11, 12], [11, 23], [12, 24], [23, 24],
+          // Left Arm Connections
+          [11, 13], [13, 15],
+          // Right Arm Connections
+          [12, 14], [14, 16],
+          // Left Leg Connections
+          [23, 25], [25, 27],
+          // Right Leg Connections
+          [24, 26], [26, 28]
         ];
 
+        // Draw Solid White Bones (matching cv2.line(frame, (x1,y1), (x2,y2), (255,255,255), 2))
         ctx.strokeStyle = '#ffffff';
-        ctx.lineWidth = 3;
+        ctx.lineWidth = 2;
         ctx.beginPath();
-
-        // Draw spine/head line
-        const shoulderCenterX = (lShoulder.x + rShoulder.x) / 2;
-        const shoulderCenterY = (lShoulder.y + rShoulder.y) / 2;
-        ctx.moveTo(head.x, head.y);
-        ctx.lineTo(shoulderCenterX, shoulderCenterY);
-
         connections.forEach(([s, e]) => {
-          const p1 = lmPx(s);
-          const p2 = lmPx(e);
-          ctx.moveTo(p1.x, p1.y);
-          ctx.lineTo(p2.x, p2.y);
+          if (landmarks[s] && landmarks[e]) {
+            const p1 = lmPx(s);
+            const p2 = lmPx(e);
+            ctx.moveTo(p1.x, p1.y);
+            ctx.lineTo(p2.x, p2.y);
+          }
         });
         ctx.stroke();
 
-        // Render Green Joint Nodes (matching OpenCV cv2.circle(frame, (x,y), 5, (0,255,0), -1))
-        const keyJointIndices = [0, 11, 12, 13, 14, 15, 16, 23, 24, 25, 26, 27, 28];
-        keyJointIndices.forEach(idx => {
-          const pt = lmPx(idx);
-          ctx.fillStyle = '#00ff00';
-          ctx.beginPath();
-          ctx.arc(pt.x, pt.y, 6, 0, Math.PI * 2);
-          ctx.fill();
+        // Render Green Filled Joint Circles for ALL detected landmarks (matching cv2.circle(frame, (x,y), 5, (0,255,0), -1))
+        landmarks.forEach(landmark => {
+          const x = landmark.x * w;
+          const y = landmark.y * h;
+          if (x >= 0 && x < w && y >= 0 && y < h) {
+            ctx.fillStyle = '#00ff00';
+            ctx.beginPath();
+            ctx.arc(x, y, 5, 0, Math.PI * 2);
+            ctx.fill();
+          }
         });
 
-        // Render Direct Vertex Angle Text at Active Joint
-        const activeElbow = rElbow.x > lElbow.x ? rElbow : lElbow;
-        ctx.fillStyle = '#ffffff';
-        ctx.strokeStyle = 'rgba(0,0,0,0.9)';
-        ctx.lineWidth = 4;
-        ctx.font = 'bold 28px Inter, sans-serif';
-        ctx.textAlign = 'left';
-        ctx.strokeText(`${analysis.keyAngle}°`, activeElbow.x + 16, activeElbow.y + 12);
-        ctx.fillText(`${analysis.keyAngle}°`, activeElbow.x + 16, activeElbow.y + 12);
-
-        // Render CV Model Main.py Telemetry Overlay (Top-Left HUD)
-        ctx.fillStyle = 'rgba(10, 15, 30, 0.85)';
-        ctx.fillRect(15, 15, 280, analysis.depth ? 150 : 125);
-        ctx.strokeStyle = '#00ff00';
-        ctx.lineWidth = 1.5;
-        ctx.strokeRect(15, 15, 280, analysis.depth ? 150 : 125);
-
-        ctx.font = 'bold 15px Consolas, monospace';
+        // Render CV Model Main.py Telemetry Overlay (Top-Left HUD - matching OpenCV cv2.putText)
+        ctx.font = 'bold 22px sans-serif';
         ctx.textAlign = 'left';
 
+        // Exercise Name (Green)
         ctx.fillStyle = '#00ff00';
-        ctx.fillText(`Exercise : ${activeExerciseName}`, 25, 40);
-        ctx.fillText(`Reps     : ${analysis.reps}`, 25, 65);
+        ctx.fillText(`Exercise: ${activeExerciseName}`, 20, 42);
 
+        // Reps (Green)
+        ctx.font = 'bold 24px sans-serif';
+        ctx.fillText(`Reps: ${analysis.reps}`, 20, 80);
+
+        // Angle (White)
+        ctx.font = 'bold 20px sans-serif';
         ctx.fillStyle = '#ffffff';
-        ctx.fillText(`Angle    : ${analysis.keyAngle}°`, 25, 90);
+        ctx.fillText(`Angle: ${analysis.keyAngle}`, 20, 116);
 
+        // Feedback (Green)
         ctx.fillStyle = '#00ff00';
-        ctx.fillText(`Feedback : ${analysis.feedbackMessage}`, 25, 115);
+        ctx.fillText(`Feedback: ${analysis.feedbackMessage}`, 20, 152);
 
+        // Depth (Yellow, if Squat)
         if (analysis.depth) {
           ctx.fillStyle = '#ffff00';
-          ctx.fillText(`Depth    : ${analysis.depth}`, 25, 138);
+          ctx.fillText(`Depth: ${analysis.depth}`, 20, 188);
         }
       }
 
@@ -761,94 +724,28 @@ export const CameraViewfinder = ({
           </div>
         )}
 
-        {/* ACTIVE CAMERA TOP HUD & POSTURE SCORE */}
+        {/* ACTIVE CAMERA CONTROLS (TOP RIGHT) */}
         {isCameraOn && (
-          <div className="absolute top-4 left-4 right-4 z-20 flex items-center justify-between pointer-events-none">
-            {/* Live Camera Badge */}
-            <div className="flex items-center gap-2 bg-slate-900/90 backdrop-blur-md px-3 py-1.5 rounded-xl border border-slate-800 pointer-events-auto shadow-lg">
-              <span className="relative flex h-2.5 w-2.5">
-                <span className={`animate-ping absolute inline-flex h-full w-full rounded-full ${isHumanDetected ? 'bg-emerald-400' : 'bg-amber-400'} opacity-75`} />
-                <span className={`relative inline-flex rounded-full h-2.5 w-2.5 ${isHumanDetected ? 'bg-emerald-500' : 'bg-amber-500'}`} />
-              </span>
-              <span className={`text-xs font-bold uppercase tracking-wider ${isHumanDetected ? 'text-emerald-400' : 'text-amber-400'}`}>
-                {isHumanDetected ? 'Human Detected • Posture Active' : 'Searching for Human'}
-              </span>
-            </div>
+          <div className="absolute top-4 right-4 z-20 flex items-center gap-2 pointer-events-auto">
+            <button
+              onClick={() => setShowHudOverlay(!showHudOverlay)}
+              className={`p-2 rounded-xl text-xs font-medium backdrop-blur-md transition-colors border ${
+                showHudOverlay
+                  ? 'bg-brand/20 border-brand/40 text-brand'
+                  : 'bg-slate-900/80 border-slate-800 text-slate-400 hover:text-slate-200'
+              }`}
+              title="Toggle AI Skeleton Overlay"
+            >
+              <Sparkles className="w-4 h-4" />
+            </button>
 
-            {/* Posture Score & Controls */}
-            <div className="flex items-center gap-2 pointer-events-auto">
-              {/* Form Score Pill */}
-              {isHumanDetected && (
-                <div className={`px-3 py-1 rounded-xl text-xs font-extrabold flex items-center gap-1.5 backdrop-blur-md border shadow-lg ${
-                  postureMetrics.postureState === 'PERFECT'
-                    ? 'bg-emerald-950/80 border-emerald-500/50 text-emerald-400'
-                    : postureMetrics.postureState === 'WARNING'
-                    ? 'bg-amber-950/80 border-amber-500/50 text-amber-400'
-                    : 'bg-rose-950/80 border-rose-500/50 text-rose-400'
-                }`}>
-                  <Activity className="w-3.5 h-3.5" />
-                  <span>{postureMetrics.postureScore}% Form Score</span>
-                </div>
-              )}
-
-              <button
-                onClick={() => setShowHudOverlay(!showHudOverlay)}
-                className={`p-2 rounded-xl text-xs font-medium backdrop-blur-md transition-colors border ${
-                  showHudOverlay
-                    ? 'bg-brand/20 border-brand/40 text-brand'
-                    : 'bg-slate-900/80 border-slate-800 text-slate-400 hover:text-slate-200'
-                }`}
-                title="Toggle AI Skeleton Overlay"
-              >
-                <Sparkles className="w-4 h-4" />
-              </button>
-
-              <button
-                onClick={handleToggleFacingMode}
-                className="p-2 rounded-xl text-xs font-medium bg-slate-900/80 backdrop-blur-md border border-slate-800 text-slate-300 hover:text-white transition-colors"
-                title="Flip Camera"
-              >
-                <RefreshCw className="w-4 h-4" />
-              </button>
-            </div>
-          </div>
-        )}
-
-        {/* FLOATING POSTURE WARNING BANNER ON VIDEO FEED */}
-        {isCameraOn && isHumanDetected && showHudOverlay && (
-          <div className="absolute bottom-4 left-4 right-4 z-20 pointer-events-none">
-            <div className={`p-3 rounded-xl border backdrop-blur-md transition-all duration-300 flex items-center justify-between shadow-2xl ${
-              postureMetrics.postureState === 'PERFECT'
-                ? 'bg-slate-900/90 border-emerald-500/40 text-emerald-300'
-                : postureMetrics.postureState === 'WARNING'
-                ? 'bg-amber-950/90 border-amber-500/60 text-amber-200 animate-pulse'
-                : 'bg-rose-950/90 border-rose-500/80 text-rose-200 animate-bounce'
-            }`}>
-              <div className="flex items-center gap-2.5">
-                {postureMetrics.postureState === 'PERFECT' && <CheckCircle2 className="w-5 h-5 text-emerald-400 shrink-0" />}
-                {postureMetrics.postureState === 'WARNING' && <AlertTriangle className="w-5 h-5 text-amber-400 shrink-0" />}
-                {postureMetrics.postureState === 'FAULT' && <AlertCircle className="w-5 h-5 text-rose-400 shrink-0" />}
-
-                <div>
-                  <span className="text-[10px] font-bold uppercase tracking-wider block text-slate-400">
-                    {activeExerciseName} • {postureMetrics.angleName}: {postureMetrics.keyAngle}° (Target: {postureMetrics.targetAngleRange})
-                  </span>
-                  <p className="text-xs font-semibold mt-0.5">
-                    {postureMetrics.feedbackMessage}
-                  </p>
-                </div>
-              </div>
-
-              <span className={`text-[10px] font-extrabold uppercase px-2 py-0.5 rounded border ${
-                postureMetrics.postureState === 'PERFECT'
-                  ? 'bg-emerald-950 border-emerald-800 text-emerald-400'
-                  : postureMetrics.postureState === 'WARNING'
-                  ? 'bg-amber-950 border-amber-800 text-amber-300'
-                  : 'bg-rose-950 border-rose-800 text-rose-300'
-              }`}>
-                {postureMetrics.postureState}
-              </span>
-            </div>
+            <button
+              onClick={handleToggleFacingMode}
+              className="p-2 rounded-xl text-xs font-medium bg-slate-900/80 backdrop-blur-md border border-slate-800 text-slate-300 hover:text-white transition-colors"
+              title="Flip Camera"
+            >
+              <RefreshCw className="w-4 h-4" />
+            </button>
           </div>
         )}
 
