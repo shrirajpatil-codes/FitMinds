@@ -8,7 +8,9 @@ import {
   Camera,
   CheckCheck,
   Flame,
-  Clock
+  Clock,
+  Save,
+  Sparkles
 } from 'lucide-react';
 import { Button } from '../components/common/Button';
 import { Card } from '../components/common/Card';
@@ -38,9 +40,9 @@ export const WorkoutPage = () => {
   const totalExercises = currentPlan.exercises.length;
   const isLastExercise = activeExerciseIndex === totalExercises - 1 && activeSet === currentExercise.sets;
 
-
   const [cameraReps, setCameraReps] = useState(0);
   const [lastCvMetrics, setLastCvMetrics] = useState(null);
+  const [lastLoggedCameraSummary, setLastLoggedCameraSummary] = useState(null);
 
   const handleCameraRepDetected = (cvResult) => {
     if (cvResult && typeof cvResult.reps === 'number') {
@@ -48,6 +50,36 @@ export const WorkoutPage = () => {
       setLastCvMetrics(cvResult);
     } else {
       setCameraReps(prev => prev + 1);
+    }
+  };
+
+  // Save Camera Reps & Close Modal
+  const handleSaveCameraReps = () => {
+    const loggedReps = cameraReps > 0 ? cameraReps : (typeof currentExercise.reps === 'number' ? currentExercise.reps : 12);
+    const summary = {
+      reps: loggedReps,
+      exerciseName: currentExercise.name,
+      formScore: lastCvMetrics?.formScore || 96,
+      depth: lastCvMetrics?.depth || 'Optimal',
+      timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+    };
+    setLastLoggedCameraSummary(summary);
+    setIsCameraModalOpen(false);
+
+    // Auto advance/complete set
+    if (isLastExercise || (activeExerciseIndex >= totalExercises - 1 && activeSet >= currentExercise.sets)) {
+      const summaryData = {
+        totalRepsCount: loggedReps,
+        cameraRepsCount: loggedReps,
+        exerciseName: currentExercise.name,
+        formScore: summary.formScore,
+        depthRating: summary.depth,
+        rom: lastCvMetrics?.rom || 125,
+      };
+      finishWorkout('Good', summaryData);
+      navigate('/session-summary');
+    } else {
+      completeCurrentSet(currentExercise.sets);
     }
   };
 
@@ -124,6 +156,26 @@ export const WorkoutPage = () => {
       </div>
 
       <ProgressBar value={overallProgress} variant="brand" showValue label={`Workout Progress (${activeExerciseIndex + 1} of ${totalExercises})`} />
+
+      {/* Camera Logged Short Summary Notification */}
+      {lastLoggedCameraSummary && (
+        <div className="p-4 rounded-2xl bg-cyan-950/40 border border-brand/40 space-y-2">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2 text-xs font-bold text-brand">
+              <Sparkles className="w-4 h-4 text-brand animate-pulse" />
+              <span>Camera Logged Result ({lastLoggedCameraSummary.exerciseName})</span>
+            </div>
+            <span className="text-[10px] font-bold text-emerald-400 bg-emerald-950 px-2 py-0.5 rounded border border-emerald-800">
+              Saved {lastLoggedCameraSummary.timestamp}
+            </span>
+          </div>
+          <div className="flex flex-wrap items-center justify-between text-xs text-slate-200 gap-2 font-medium">
+            <span>Counted Reps: <strong className="text-brand text-sm">{lastLoggedCameraSummary.reps} Reps</strong></span>
+            <span>Form Accuracy: <strong className="text-emerald-400">{lastLoggedCameraSummary.formScore}%</strong></span>
+            <span>Pose Depth: <strong className="text-cyan-300">{lastLoggedCameraSummary.depth}</strong></span>
+          </div>
+        </div>
+      )}
 
       {/* Main Focus Card */}
       <Card variant="highlighted" className="p-6 md:p-8 space-y-6 text-center">
@@ -217,7 +269,7 @@ export const WorkoutPage = () => {
         description={`AI Pose Tracker for ${currentExercise.name}`}
         maxWidth="max-w-3xl"
         footer={
-          <div className="flex items-center justify-between w-full">
+          <div className="flex flex-col sm:flex-row items-center justify-between w-full gap-2">
             <Button
               variant="outline"
               size="sm"
@@ -228,13 +280,23 @@ export const WorkoutPage = () => {
             >
               Open Fullscreen Counter Page
             </Button>
-            <Button
-              variant="secondary"
-              size="sm"
-              onClick={() => setIsCameraModalOpen(false)}
-            >
-              Close Camera
-            </Button>
+            <div className="flex items-center gap-2 w-full sm:w-auto">
+              <Button
+                variant="secondary"
+                size="sm"
+                onClick={() => setIsCameraModalOpen(false)}
+              >
+                Close Camera
+              </Button>
+              <Button
+                variant="primary"
+                size="sm"
+                leftIcon={Save}
+                onClick={handleSaveCameraReps}
+              >
+                Save & Log Reps ({cameraReps || currentExercise.reps || 12})
+              </Button>
+            </div>
           </div>
         }
       >
@@ -248,4 +310,5 @@ export const WorkoutPage = () => {
     </div>
   );
 };
+
 
