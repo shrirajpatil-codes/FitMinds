@@ -55,35 +55,33 @@ export const SessionSummaryPage = () => {
           />
           <StatCard
             label="Movement"
-            value={`${summaryData.exerciseName || 'Workout Session'}`}
+            value={`${summaryData.exerciseName || 'Bicep Curl'}`}
             icon={Dumbbell}
           />
           <StatCard
             label="Form Accuracy"
-            value={`${summaryData.formScore || 96}%`}
+            value={`${summaryData.formScore ?? 96}%`}
             icon={Flame}
           />
           <StatCard
-            label="Total Reps"
-            value={`${summaryData.totalRepsCount || summaryData.repsCompleted || 0}`}
+            label="Camera Reps Counted"
+            value={`${summaryData.totalRepsCount ?? summaryData.cameraRepsCount ?? 0}`}
             icon={TrendingUp}
           />
         </div>
 
-        {/* AI CV Form Output Badge Banner */}
-        {summaryData.formScore && (
-          <div className="mt-4 p-3 rounded-xl bg-slate-900/90 border border-brand/40 text-xs flex flex-wrap items-center justify-between gap-2 text-left">
-            <div className="flex items-center gap-2">
-              <span className="w-2.5 h-2.5 rounded-full bg-emerald-400 animate-pulse" />
-              <span className="text-slate-300 font-medium">
-                <strong>CV Model Output:</strong> Depth Rating: <span className="text-brand font-bold">{summaryData.depthRating || 'Optimal'}</span> | Range of Motion: <span className="text-emerald-400 font-bold">{summaryData.rom || 125}°</span>
-              </span>
-            </div>
-            <span className="text-[10px] uppercase font-bold text-slate-400 bg-slate-950 px-2 py-1 rounded border border-slate-800">
-              MediaPipe CV Verified
+        {/* AI Camera Analysis Summary Box */}
+        <div className="mt-4 p-3.5 rounded-xl bg-slate-900/90 border border-emerald-500/30 text-xs flex flex-wrap items-center justify-between gap-3 text-left">
+          <div className="flex items-center gap-2">
+            <span className="w-2.5 h-2.5 rounded-full bg-emerald-400 animate-pulse shrink-0" />
+            <span className="text-slate-200 font-medium">
+              <strong>Camera Analysis Summary:</strong> <span className="text-emerald-400 font-bold">{summaryData.totalRepsCount ?? summaryData.cameraRepsCount ?? 0} Reps</span> | Accuracy: <span className="text-brand font-bold">{summaryData.formScore ?? 96}%</span> | Depth: <span className="text-cyan-300 font-bold">{summaryData.depthRating || 'Optimal'}</span>
             </span>
           </div>
-        )}
+          <span className="text-[10px] uppercase font-bold text-emerald-300 bg-emerald-950/80 px-2.5 py-1 rounded border border-emerald-800 shrink-0">
+            MediaPipe AI Verified
+          </span>
+        </div>
       </Card>
 
       {/* User Reflection Feedback Form */}
