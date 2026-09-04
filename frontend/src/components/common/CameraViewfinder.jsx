@@ -280,10 +280,16 @@ export const CameraViewfinder = ({
 
       if (showHudOverlay) {
         // Convert MediaPipe normalized landmark coordinates (0..1) to canvas pixel coordinates
-        const lmPx = (idx) => ({
-          x: landmarks[idx] ? landmarks[idx].x * w : 0,
-          y: landmarks[idx] ? landmarks[idx].y * h : 0
-        });
+        // Handle horizontal mirroring when facingMode === 'user' (matching -scale-x-100 on video)
+        const isMirrored = facingMode === 'user';
+        const lmPx = (idx) => {
+          if (!landmarks[idx]) return { x: 0, y: 0 };
+          const normX = isMirrored ? (1 - landmarks[idx].x) : landmarks[idx].x;
+          return {
+            x: normX * w,
+            y: landmarks[idx].y * h
+          };
+        };
 
         // MediaPipe Pose Connections (matching ml/CV_model/main.py connections)
         const connections = [
@@ -319,7 +325,8 @@ export const CameraViewfinder = ({
         // Render Green Filled Joint Circles for ALL detected landmarks (matching cv2.circle(frame, (x,y), 5, (0,255,0), -1))
         landmarks.forEach(landmark => {
           if (landmark && (landmark.visibility === undefined || landmark.visibility > 0.3)) {
-            const x = landmark.x * w;
+            const normX = isMirrored ? (1 - landmark.x) : landmark.x;
+            const x = normX * w;
             const y = landmark.y * h;
             if (x >= 0 && x < w && y >= 0 && y < h) {
               ctx.fillStyle = '#00ff00';

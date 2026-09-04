@@ -213,6 +213,7 @@ export const WorkoutPage = () => {
         <CameraViewfinder
           activeExerciseName={currentExercise.name}
           targetReps={currentExercise.reps}
+          autoStart={true}
         />
       </Modal>
     </div>

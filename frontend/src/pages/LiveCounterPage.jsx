@@ -106,6 +106,7 @@ export const LiveCounterPage = () => {
             activeExerciseName={selectedExerciseName}
             targetReps={targetReps}
             onRepDetected={handleRepDetected}
+            autoStart={true}
           />
         </div>
 
