@@ -106,11 +106,11 @@ export class BicepCurlAnalyzer {
     this.maxAngle = Math.max(this.maxAngle, angle);
 
     let repIncremented = false;
-    if (angle > 150) {
+    if (angle > 140) {
       this.stage = 'down';
     }
 
-    if (angle < 50 && this.stage === 'down') {
+    if (angle < 75 && this.stage === 'down') {
       this.stage = 'up';
       this.reps += 1;
       repIncremented = true;

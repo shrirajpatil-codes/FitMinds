@@ -439,6 +439,7 @@ export const CameraViewfinder = ({
   useEffect(() => {
     if (cvEngineRef.current) {
       cvEngineRef.current.setExercise(activeExerciseName);
+      lastRepsRef.current = 0;
     }
   }, [activeExerciseName]);
 
