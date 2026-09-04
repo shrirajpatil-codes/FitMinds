@@ -35,20 +35,9 @@ export const TodayPlanPage = () => {
             <Button
               variant="outline"
               leftIcon={Sliders}
-              onClick={() => setIsAdjustModalOpen(false) || setIsAdjustModalOpen(true)}
+              onClick={() => setIsAdjustModalOpen(true)}
             >
               Adjust
-            </Button>
-            <Button
-              variant="outline"
-              size="md"
-              leftIcon={Camera}
-              onClick={() => {
-                if (startWorkoutSession) startWorkoutSession();
-                navigate('/live-counter');
-              }}
-            >
-              Live AI Camera Workout
             </Button>
             <Button
               variant="primary"
@@ -122,16 +111,24 @@ export const TodayPlanPage = () => {
       </div>
 
       {/* Bottom Start Action */}
-      <div className="p-4 rounded-2xl bg-slate-900 border border-slate-800 flex items-center justify-between">
+      <div className="p-4 rounded-2xl bg-slate-900 border border-slate-800 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
         <div className="text-xs text-slate-400">
-          Ready to begin? You can switch to the <span className="text-brand font-medium">Live Rep Counter</span> during the workout.
+          Ready to begin? Choose your session mode: <span className="text-slate-200 font-medium">Standard Guided</span> or <span className="text-brand font-medium">Live AI Camera Counter</span>.
         </div>
-        <Button variant="primary" leftIcon={Play} onClick={() => {
-          if (startWorkoutSession) startWorkoutSession();
-          navigate('/live-counter');
-        }}>
-          Start Now
-        </Button>
+        <div className="flex flex-wrap items-center gap-2 shrink-0">
+          <Button variant="outline" size="sm" leftIcon={Camera} onClick={() => {
+            if (startWorkoutSession) startWorkoutSession();
+            navigate('/live-counter');
+          }}>
+            Live AI Camera Workout
+          </Button>
+          <Button variant="primary" size="sm" leftIcon={Play} onClick={() => {
+            if (startWorkoutSession) startWorkoutSession();
+            navigate('/workout');
+          }}>
+            Start Workout
+          </Button>
+        </div>
       </div>
 
       {/* Plan Adjustment Modal */}
