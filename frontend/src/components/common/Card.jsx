@@ -11,15 +11,15 @@ export const Card = ({
   footer,
   ...props
 }) => {
-  const baseStyles = "rounded-2xl border backdrop-blur-xl transition-all duration-300 p-5 bg-[#101221]/70";
+  const baseStyles = "rounded-2xl border transition-all duration-200 p-5 bg-background-surface";
 
   const variants = {
-    default: "border-slate-800/80 text-slate-100 hover:border-slate-700/80 shadow-[0_8px_32px_rgba(0,0,0,0.4)]",
-    highlighted: "border-[#00f2ff]/40 bg-gradient-to-br from-[#101221]/90 via-[#13172a]/80 to-[#1e1b4b]/50 shadow-[0_0_30px_rgba(0,242,255,0.15)] text-slate-100",
-    interactive: "border-slate-800/80 hover:border-[#00f2ff]/40 hover:bg-[#16192e]/80 cursor-pointer active:scale-[0.99] shadow-[0_8px_32px_rgba(0,0,0,0.4)] hover:shadow-[0_0_20px_rgba(0,242,255,0.12)]",
-    aiInsight: "border-purple-500/40 bg-gradient-to-br from-purple-950/40 via-[#101221]/90 to-indigo-950/40 shadow-[0_0_25px_rgba(168,85,247,0.15)] text-purple-100",
-    warning: "border-amber-500/40 bg-amber-950/20 text-amber-100 shadow-[0_0_20px_rgba(245,158,11,0.1)]",
-    success: "border-emerald-500/40 bg-emerald-950/20 text-emerald-100 shadow-[0_0_20px_rgba(16,185,129,0.1)]",
+    default: "border-slate-800 text-slate-100",
+    highlighted: "border-brand/40 bg-slate-900/90 shadow-brand-glow",
+    interactive: "border-slate-800 hover:border-slate-700 hover:bg-background-hover cursor-pointer active:scale-[0.99]",
+    aiInsight: "border-ai-border/60 bg-gradient-to-b from-ai-bg/40 to-slate-900 shadow-ai-glow",
+    warning: "border-status-warning/40 bg-amber-950/20 text-amber-100",
+    success: "border-status-success/40 bg-emerald-950/20 text-emerald-100",
   };
 
   return (

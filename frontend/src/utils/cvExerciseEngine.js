@@ -106,11 +106,11 @@ export class BicepCurlAnalyzer {
     this.maxAngle = Math.max(this.maxAngle, angle);
 
     let repIncremented = false;
-    if (angle > 140) {
+    if (angle > 150) {
       this.stage = 'down';
     }
 
-    if (angle < 75 && this.stage === 'down') {
+    if (angle < 50 && this.stage === 'down') {
       this.stage = 'up';
       this.reps += 1;
       repIncremented = true;
@@ -122,18 +122,18 @@ export class BicepCurlAnalyzer {
     let postureState = 'PERFECT';
 
     if (angle > 150) {
-      feedback = 'Extend your arm fully';
-      voiceCue = 'Extend arm';
+      feedback = 'Extend your arm';
+      voiceCue = '';
       postureState = 'PERFECT';
       formScore = 98;
     } else if (angle < 50) {
-      feedback = 'Good contraction!';
-      voiceCue = 'Good contraction!';
+      feedback = 'Good contraction';
+      voiceCue = '';
       postureState = 'PERFECT';
       formScore = 100;
     } else {
-      feedback = 'Keep curling with smooth control';
-      voiceCue = 'Keep curling';
+      feedback = 'Keep curling';
+      voiceCue = '';
       postureState = 'PERFECT';
       formScore = 92;
     }

@@ -531,14 +531,14 @@ export const CameraViewfinder = ({
       if (showHudOverlay) {
         const time = Date.now() * 0.003;
 
-        let strokeColor = 'rgba(0, 242, 255, 0.90)';
-        let glowColor = '#00f2ff';
-        let accentColor = 'rgba(0, 242, 255, 0.35)';
+        let strokeColor = 'rgba(16, 185, 129, 0.85)';
+        let glowColor = '#10b981';
+        let accentColor = 'rgba(16, 185, 129, 0.3)';
 
         if (analysis.postureState === 'WARNING') {
           strokeColor = 'rgba(245, 158, 11, 0.95)';
           glowColor = '#f59e0b';
-          accentColor = 'rgba(245, 158, 11, 0.35)';
+          accentColor = 'rgba(245, 158, 11, 0.3)';
         } else if (analysis.postureState === 'FAULT') {
           strokeColor = 'rgba(244, 63, 94, 0.95)';
           glowColor = '#f43f5e';
@@ -600,94 +600,77 @@ export const CameraViewfinder = ({
         ctx.lineTo(boxX + boxWidth, boxY + boxHeight - cornerLen);
         ctx.stroke();
 
-        // Draw Dynamic Skeleton Mesh Lines (Moves with actual human body)
-        ctx.strokeStyle = strokeColor;
-        ctx.lineWidth = 4;
+        // Draw Dynamic Skeleton Mesh Lines (Exact MediaPipe connections matching CV_model/main.py)
+        const connections = [
+          [11, 12], [11, 23], [12, 24], [23, 24], // Torso
+          [11, 13], [13, 15],                    // Left Arm
+          [12, 14], [14, 16],                    // Right Arm
+          [23, 25], [25, 27],                    // Left Leg
+          [24, 26], [26, 28]                     // Right Leg
+        ];
 
+        ctx.strokeStyle = '#ffffff';
+        ctx.lineWidth = 3;
         ctx.beginPath();
-        // Head to Shoulders Center
+
+        // Draw spine/head line
         const shoulderCenterX = (lShoulder.x + rShoulder.x) / 2;
         const shoulderCenterY = (lShoulder.y + rShoulder.y) / 2;
         ctx.moveTo(head.x, head.y);
         ctx.lineTo(shoulderCenterX, shoulderCenterY);
 
-        // Shoulder Line
-        ctx.moveTo(lShoulder.x, lShoulder.y);
-        ctx.lineTo(rShoulder.x, rShoulder.y);
-
-        // Left Arm: Shoulder -> Elbow -> Wrist
-        ctx.moveTo(lShoulder.x, lShoulder.y);
-        ctx.lineTo(lElbow.x, lElbow.y);
-        ctx.lineTo(lWrist.x, lWrist.y);
-
-        // Right Arm: Shoulder -> Elbow -> Wrist
-        ctx.moveTo(rShoulder.x, rShoulder.y);
-        ctx.lineTo(rElbow.x, rElbow.y);
-        ctx.lineTo(rWrist.x, rWrist.y);
-
-        // Torso Spine Line
-        const hipCenterX = (lHip.x + rHip.x) / 2;
-        const hipCenterY = (lHip.y + rHip.y) / 2;
-        ctx.moveTo(shoulderCenterX, shoulderCenterY);
-        ctx.lineTo(hipCenterX, hipCenterY);
-
-        // Hip Line
-        ctx.moveTo(lHip.x, lHip.y);
-        ctx.lineTo(rHip.x, rHip.y);
-
-        // Left Leg: Hip -> Knee -> Ankle
-        ctx.moveTo(lHip.x, lHip.y);
-        ctx.lineTo(lKnee.x, lKnee.y);
-        ctx.lineTo(lAnkle.x, lAnkle.y);
-
-        // Right Leg: Hip -> Knee -> Ankle
-        ctx.moveTo(rHip.x, rHip.y);
-        ctx.lineTo(rKnee.x, rKnee.y);
-        ctx.lineTo(rAnkle.x, rAnkle.y);
+        connections.forEach(([s, e]) => {
+          const p1 = lmPx(s);
+          const p2 = lmPx(e);
+          ctx.moveTo(p1.x, p1.y);
+          ctx.lineTo(p2.x, p2.y);
+        });
         ctx.stroke();
 
-        // Render Glowing Joint Node Spheres
-        const joints = [head, lShoulder, rShoulder, lElbow, rElbow, lWrist, rWrist, lHip, rHip, lKnee, rKnee, lAnkle, rAnkle];
-        joints.forEach(j => {
-          ctx.fillStyle = glowColor;
+        // Render Green Joint Nodes (matching OpenCV cv2.circle(frame, (x,y), 5, (0,255,0), -1))
+        const keyJointIndices = [0, 11, 12, 13, 14, 15, 16, 23, 24, 25, 26, 27, 28];
+        keyJointIndices.forEach(idx => {
+          const pt = lmPx(idx);
+          ctx.fillStyle = '#00ff00';
           ctx.beginPath();
-          ctx.arc(j.x, j.y, 6, 0, Math.PI * 2);
-          ctx.fill();
-
-          ctx.fillStyle = accentColor;
-          ctx.beginPath();
-          ctx.arc(j.x, j.y, 12 + Math.sin(time * 4) * 2, 0, Math.PI * 2);
+          ctx.arc(pt.x, pt.y, 6, 0, Math.PI * 2);
           ctx.fill();
         });
 
-        // Render Direct Vertex Angle Text (e.g. 87°) at the active Elbow Joint (matching user screenshot style)
+        // Render Direct Vertex Angle Text at Active Joint
         const activeElbow = rElbow.x > lElbow.x ? rElbow : lElbow;
         ctx.fillStyle = '#ffffff';
-        ctx.strokeStyle = 'rgba(0,0,0,0.85)';
-        ctx.lineWidth = 5;
-        ctx.font = 'bold 36px Inter, sans-serif';
+        ctx.strokeStyle = 'rgba(0,0,0,0.9)';
+        ctx.lineWidth = 4;
+        ctx.font = 'bold 28px Inter, sans-serif';
         ctx.textAlign = 'left';
         ctx.strokeText(`${analysis.keyAngle}°`, activeElbow.x + 16, activeElbow.y + 12);
         ctx.fillText(`${analysis.keyAngle}°`, activeElbow.x + 16, activeElbow.y + 12);
 
-        // Render Dynamic Joint Angle Badge above human head
-        ctx.fillStyle = 'rgba(15, 23, 42, 0.90)';
-        ctx.strokeStyle = glowColor;
+        // Render CV Model Main.py Telemetry Overlay (Top-Left HUD)
+        ctx.fillStyle = 'rgba(10, 15, 30, 0.85)';
+        ctx.fillRect(15, 15, 280, analysis.depth ? 150 : 125);
+        ctx.strokeStyle = '#00ff00';
         ctx.lineWidth = 1.5;
-        const badgeW = 175;
-        const badgeH = 28;
-        const badgeX = head.x - badgeW / 2;
-        const badgeY = Math.max(10, head.y - 45);
+        ctx.strokeRect(15, 15, 280, analysis.depth ? 150 : 125);
 
-        ctx.beginPath();
-        ctx.roundRect(badgeX, badgeY, badgeW, badgeH, 8);
-        ctx.fill();
-        ctx.stroke();
+        ctx.font = 'bold 15px Consolas, monospace';
+        ctx.textAlign = 'left';
 
-        ctx.fillStyle = '#f8fafc';
-        ctx.font = 'bold 11px Inter, sans-serif';
-        ctx.textAlign = 'center';
-        ctx.fillText(`${analysis.angleName}: ${analysis.keyAngle}°`, head.x, badgeY + 18);
+        ctx.fillStyle = '#00ff00';
+        ctx.fillText(`Exercise : ${activeExerciseName}`, 25, 40);
+        ctx.fillText(`Reps     : ${analysis.reps}`, 25, 65);
+
+        ctx.fillStyle = '#ffffff';
+        ctx.fillText(`Angle    : ${analysis.keyAngle}°`, 25, 90);
+
+        ctx.fillStyle = '#00ff00';
+        ctx.fillText(`Feedback : ${analysis.feedbackMessage}`, 25, 115);
+
+        if (analysis.depth) {
+          ctx.fillStyle = '#ffff00';
+          ctx.fillText(`Depth    : ${analysis.depth}`, 25, 138);
+        }
       }
 
       animFrameRef.current = requestAnimationFrame(draw);
