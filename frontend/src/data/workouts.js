@@ -74,7 +74,7 @@ export const workoutAdjustmentPresets = [
     description: 'Reduce workout duration from 20 to 12 minutes.',
     reducedDuration: 12,
     title: 'Express 12-Min Burn',
-    targetFocus: 'Compulsory Bicep & Core High-Efficiency',
+    targetFocus: 'Arm & Core High-Efficiency',
     actionText: 'Apply 12-Min Express Plan',
     exercises: [
       { ...compulsoryBicepExercise, sets: 3, reps: 10, targetReps: 10 },
