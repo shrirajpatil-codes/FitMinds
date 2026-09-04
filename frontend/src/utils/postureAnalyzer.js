@@ -1,5 +1,5 @@
 /**
- * FITMINDS Real-Time Posture Correction Engine
+ * FitMirror AI Real-Time Posture Correction Engine
  * Analyzes joint positions, calculates biomechanical angles,
  * and provides real-time posture feedback & audio coaching cues for ALL exercises.
  */

@@ -84,10 +84,10 @@ export const OnboardingPage = () => {
             <div className="w-9 h-9 rounded-xl bg-gradient-to-tr from-brand-blue to-brand flex items-center justify-center text-slate-950 font-bold shadow-brand-glow">
               <Zap className="w-5 h-5 fill-slate-950 stroke-none" />
             </div>
-            <span className="font-extrabold text-xl tracking-wider text-slate-100">FITMINDS</span>
+            <span className="font-extrabold text-xl tracking-wider text-slate-100">FITMIRROR AI</span>
           </div>
           <h2 className="text-xl font-bold text-slate-100">Personalize Your Fitness Strategy</h2>
-          <p className="text-xs text-slate-400">Step {step} of {totalSteps} — Help FITMINDS understand your student routine</p>
+          <p className="text-xs text-slate-400">Step {step} of {totalSteps} — Help FitMirror AI understand your student routine</p>
           <ProgressBar value={(step / totalSteps) * 100} variant="brand" size="sm" />
         </div>
 

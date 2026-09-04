@@ -1,12 +1,12 @@
 /**
- * FITMINDS API Service Client
+ * FitMirror AI API Service Client
  * Connects Frontend to Node.js/Express + PostgreSQL API
  */
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000/api';
 
 async function request(endpoint, options = {}) {
-  const token = localStorage.getItem('FITMINDS_TOKEN');
+  const token = localStorage.getItem('FITMIRROR_TOKEN') || localStorage.getItem('FITMINDS_TOKEN');
   
   const headers = {
     'Content-Type': 'application/json',

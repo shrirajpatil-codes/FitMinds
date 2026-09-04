@@ -35,7 +35,7 @@ export const WeeklyReflectionPage = () => {
           Weekly Student Reflection
         </h2>
         <p className="text-xs text-slate-400">
-          How did your week actually go? FITMINDS uses your reflection to refine your workout plan.
+          How did your week actually go? FitMirror AI uses your reflection to refine your workout plan.
         </p>
       </div>
 
@@ -103,7 +103,7 @@ export const WeeklyReflectionPage = () => {
           {/* Question 4 */}
           <div className="space-y-2">
             <label className="text-xs font-semibold text-slate-300 uppercase tracking-wide">
-              4. What should FITMINDS change next week?
+              4. What should FitMirror AI change next week?
             </label>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
               {[
@@ -130,7 +130,7 @@ export const WeeklyReflectionPage = () => {
           </div>
 
           <Alert variant="ai">
-            FITMINDS will update your strategy health metrics and adjust next week's plan based on your responses.
+            FitMirror AI will update your strategy health metrics and adjust next week's plan based on your responses.
           </Alert>
 
           <Button type="submit" variant="primary" fullWidth size="lg" rightIcon={ArrowRight}>

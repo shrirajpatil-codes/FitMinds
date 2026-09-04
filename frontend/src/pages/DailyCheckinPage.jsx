@@ -42,7 +42,7 @@ export const DailyCheckinPage = () => {
         <div className="w-14 h-14 rounded-2xl bg-brand/20 border border-brand text-brand flex items-center justify-center animate-spin">
           <Sparkles className="w-7 h-7" />
         </div>
-        <h3 className="text-xl font-bold text-slate-100">FITMINDS is adapting today's plan...</h3>
+        <h3 className="text-xl font-bold text-slate-100">FitMirror AI is adapting today's plan...</h3>
         <p className="text-xs text-slate-400 max-w-sm">
           Recalibrating workout duration and volume to match your {energy.toLowerCase()} energy and {availableTime}-min window.
         </p>
@@ -58,7 +58,7 @@ export const DailyCheckinPage = () => {
           Daily Context Check-in
         </h2>
         <p className="text-xs text-slate-400">
-          Tell FITMINDS about your available time and energy today so your plan adapts automatically.
+          Tell FitMirror AI about your available time and energy today so your plan adapts automatically.
         </p>
       </div>
 
@@ -171,7 +171,7 @@ export const DailyCheckinPage = () => {
           />
 
           <Alert variant="ai">
-            FITMINDS will use these signals to adjust exercise count and volume without interrupting your weekly consistency streak.
+            FitMirror AI will use these signals to adjust exercise count and volume without interrupting your weekly consistency streak.
           </Alert>
 
           <Button type="submit" variant="primary" fullWidth rightIcon={ArrowRight} size="lg">

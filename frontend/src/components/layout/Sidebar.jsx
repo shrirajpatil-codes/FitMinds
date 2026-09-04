@@ -63,12 +63,12 @@ export const Sidebar = ({ className }) => {
           </div>
           <div className="flex flex-col">
             <div className="flex items-center gap-1.5">
-              <span className="font-extrabold text-base tracking-wider text-slate-100">FITMINDS</span>
+              <span className="font-extrabold text-base tracking-wider text-slate-100">FITMIRROR</span>
               <span className="px-1.5 py-0.2 text-[9px] font-bold bg-brand/20 text-brand rounded border border-brand/30">
                 AI
               </span>
             </div>
-            <span className="text-[10px] text-slate-400 font-medium">Adaptive Student Fitness</span>
+            <span className="text-[10px] text-slate-400 font-medium">Adaptive Fitness Vision AI</span>
           </div>
         </div>
 

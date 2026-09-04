@@ -19,8 +19,10 @@ export const ActivityHeatmap = ({ className }) => {
       fetchHeatmapData();
     };
 
+    window.addEventListener('fitmirror_activity_updated', handleActivityUpdate);
     window.addEventListener('fitminds_activity_updated', handleActivityUpdate);
     return () => {
+      window.removeEventListener('fitmirror_activity_updated', handleActivityUpdate);
       window.removeEventListener('fitminds_activity_updated', handleActivityUpdate);
     };
   }, []);

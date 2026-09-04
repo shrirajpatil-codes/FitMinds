@@ -1,5 +1,5 @@
 /**
- * FITMINDS Mock Workouts & Exercise Data
+ * FitMirror AI Mock Workouts & Exercise Data
  */
 export const todayWorkoutPlan = {
   id: 'plan_today_01',

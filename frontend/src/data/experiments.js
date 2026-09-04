@@ -1,5 +1,5 @@
 /**
- * FITMINDS Fitness Experiments Mock Data
+ * FitMirror AI Fitness Experiments Mock Data
  */
 export const activeExperiments = [
   {

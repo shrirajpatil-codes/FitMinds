@@ -17,7 +17,7 @@ const pageTitles = {
   '/experiments': 'Fitness Experiments',
   '/strategy-health': 'Strategy Health',
   '/decision-history': 'AI Decision History',
-  '/coach': 'FITMINDS AI Coach',
+  '/coach': 'FitMirror AI Coach',
   '/profile': 'Student Profile',
   '/settings': 'Application Settings',
   '/onboarding': 'Onboarding Setup',
@@ -25,7 +25,7 @@ const pageTitles = {
 
 export const AppShell = () => {
   const location = useLocation();
-  const title = pageTitles[location.pathname] || 'FITMINDS';
+  const title = pageTitles[location.pathname] || 'FitMirror AI';
 
   return (
     <div className="min-h-screen bg-background text-slate-100 flex flex-col md:flex-row antialiased">

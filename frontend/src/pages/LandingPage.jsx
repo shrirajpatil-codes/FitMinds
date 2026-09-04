@@ -14,7 +14,7 @@ export const LandingPage = () => {
           <div className="w-9 h-9 rounded-xl bg-gradient-to-tr from-brand-blue to-brand flex items-center justify-center text-slate-950 font-bold shadow-brand-glow">
             <Zap className="w-5 h-5 fill-slate-950 stroke-none" />
           </div>
-          <span className="font-extrabold text-lg tracking-wider text-slate-100">FITMINDS</span>
+          <span className="font-extrabold text-lg tracking-wider text-slate-100">FITMIRROR AI</span>
         </div>
 
         <div className="flex items-center gap-4">
@@ -32,7 +32,7 @@ export const LandingPage = () => {
         {/* Hero Section */}
         <section className="text-center space-y-6 max-w-3xl mx-auto">
           <Badge variant="brand" icon={Sparkles} className="px-3 py-1">
-            AI-POWERED ADAPTIVE FITNESS FOR STUDENTS
+            AI-POWERED ADAPTIVE FITNESS & VISION CAMERA
           </Badge>
 
           <h1 className="text-4xl sm:text-5xl lg:text-6xl font-extrabold tracking-tight text-slate-100 leading-tight">
@@ -40,7 +40,7 @@ export const LandingPage = () => {
           </h1>
 
           <p className="text-slate-400 text-base sm:text-lg max-w-2xl mx-auto leading-relaxed">
-            FITMINDS adapts your workout schedule around exams, energy levels, and student stress—so you build a fitness habit that lasts.
+            FitMirror AI adapts your workout schedule around exams, energy levels, and student stress—so you build a fitness habit that lasts.
           </p>
 
           <div className="flex items-center justify-center gap-4 pt-4">
@@ -93,7 +93,7 @@ export const LandingPage = () => {
 
       {/* Footer */}
       <footer className="border-t border-slate-800/80 py-8 px-6 text-center text-xs text-slate-400">
-        <p>© 2026 FITMINDS — AI-Powered Adaptive Student Fitness Platform.</p>
+        <p>© 2026 FitMirror AI — AI-Powered Adaptive Student Fitness Platform.</p>
       </footer>
     </div>
   );

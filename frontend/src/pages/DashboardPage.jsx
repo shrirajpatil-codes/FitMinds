@@ -285,7 +285,7 @@ export const DashboardPage = () => {
           <Card variant="aiInsight" className="space-y-3">
             <div className="flex items-center justify-between">
               <Badge variant="ai" icon={Sparkles}>
-                FITMINDS AI COACH
+                FITMIRROR AI COACH
               </Badge>
               <span className="text-[10px] text-purple-300">Gemini Explanation</span>
             </div>

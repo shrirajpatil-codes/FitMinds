@@ -24,7 +24,7 @@ export const DecisionHistoryPage = () => {
             AI Decision History Timeline
           </h2>
           <p className="text-xs text-slate-400">
-            Transparent record explaining why your fitness plan was adapted by FITMINDS.
+            Transparent record explaining why your fitness plan was adapted by FitMirror AI.
           </p>
         </div>
 
@@ -34,7 +34,7 @@ export const DecisionHistoryPage = () => {
       </div>
 
       <Alert variant="ai">
-        FITMINDS logs every workload adjustment so you can inspect how your context signals shaped your fitness strategy.
+        FitMirror AI logs every workload adjustment so you can inspect how your context signals shaped your fitness strategy.
       </Alert>
 
       {/* Timeline List */}

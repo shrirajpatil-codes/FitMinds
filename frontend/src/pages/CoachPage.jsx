@@ -45,7 +45,7 @@ export const CoachPage = () => {
         <div>
           <h2 className="text-2xl font-bold text-slate-100 flex items-center gap-2">
             <Bot className="w-6 h-6 text-purple-400" />
-            FITMINDS AI Coach
+            FitMirror AI Coach
           </h2>
           <p className="text-xs text-slate-400">
             Ask any questions about weight loss/gain, workout adjustments, nutrition, or student exam schedules.

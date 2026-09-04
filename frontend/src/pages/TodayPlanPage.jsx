@@ -40,12 +40,23 @@ export const TodayPlanPage = () => {
               Adjust
             </Button>
             <Button
+              variant="outline"
+              size="md"
+              leftIcon={Camera}
+              onClick={() => {
+                if (startWorkoutSession) startWorkoutSession();
+                navigate('/live-counter');
+              }}
+            >
+              Live AI Camera Workout
+            </Button>
+            <Button
               variant="primary"
               size="md"
               leftIcon={Play}
               onClick={() => {
                 if (startWorkoutSession) startWorkoutSession();
-                navigate('/live-counter');
+                navigate('/workout');
               }}
             >
               Start Workout

@@ -24,12 +24,12 @@ export const ExperimentsPage = () => {
         </div>
         <h2 className="text-2xl font-extrabold text-slate-100">Fitness Strategy Experiments</h2>
         <p className="text-xs text-slate-400">
-          FITMINDS tests micro-adjustments in session length and timing to discover what yields your highest consistency.
+          FitMirror AI tests micro-adjustments in session length and timing to discover what yields your highest consistency.
         </p>
       </div>
 
       <Alert variant="ai">
-        "FITMINDS can try small changes to understand what works better for your student schedule."
+        "FitMirror AI can try small changes to understand what works better for your student schedule."
       </Alert>
 
       {/* Active Experiments */}

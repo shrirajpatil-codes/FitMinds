@@ -10,7 +10,7 @@ export const PlaceholderPage = ({ title = 'Page Title', step = '3' }) => {
     <div className="space-y-6">
       {/* Top Banner Alert */}
       <Alert variant="ai" title={`${title} Foundation Ready`}>
-        FITMINDS frontend design system is initialized. Full interactive features for {title} will be connected in Step {step}.
+        FitMirror AI frontend design system is initialized. Full interactive features for {title} will be connected in Step {step}.
       </Alert>
 
       {/* KPI Stat Cards Demonstration */}

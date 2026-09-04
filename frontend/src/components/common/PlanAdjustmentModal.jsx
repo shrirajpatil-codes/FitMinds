@@ -19,7 +19,7 @@ export const PlanAdjustmentModal = ({ isOpen, onClose }) => {
       isOpen={isOpen}
       onClose={onClose}
       title="Adjust Today's Plan"
-      description="FITMINDS adapts your workout workload to fit your immediate real-life constraints."
+      description="FitMirror AI adapts your workout workload to fit your immediate real-life constraints."
       footer={
         <>
           <Button variant="outline" onClick={onClose}>
@@ -62,12 +62,12 @@ export const PlanAdjustmentModal = ({ isOpen, onClose }) => {
           })}
         </div>
 
-        {/* FITMINDS AI Preview Response */}
+        {/* FITMIRROR AI Preview Response */}
         <div className="p-4 rounded-xl bg-purple-950/30 border border-purple-800/50 flex items-start gap-3">
           <Sparkles className="w-5 h-5 text-purple-400 shrink-0 mt-0.5" />
           <div className="text-xs space-y-1">
             <span className="font-semibold text-purple-300 uppercase tracking-wide text-[10px]">
-              FITMINDS Adaptive Response Preview
+              FitMirror AI Adaptive Response Preview
             </span>
             <p className="text-slate-200 leading-relaxed">
               "Reduce today's session from {currentPlan.durationMinutes} minutes to {selectedPreset.reducedDuration} minutes? Exercise reps will be recalibrated to prioritize posture & core stability."

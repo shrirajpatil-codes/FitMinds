@@ -22,7 +22,7 @@ export const ProgressPage = () => {
             Progress & Consistency Analytics
           </h2>
           <p className="text-xs text-slate-400">
-            FITMINDS tracks your habit retention and workload adaptability over time.
+            FitMirror AI tracks your habit retention and workload adaptability over time.
           </p>
         </div>
 
@@ -103,7 +103,7 @@ export const ProgressPage = () => {
         </p>
 
         <Alert variant="ai">
-          FITMINDS uses these findings to prevent future dropouts during exam periods.
+          FitMirror AI uses these findings to prevent future dropouts during exam periods.
         </Alert>
 
         <div className="flex items-center justify-end pt-2">

@@ -1,5 +1,5 @@
 /**
- * FITMINDS AI Decision History Mock Data
+ * FitMirror AI Decision History Mock Data
  */
 export const decisionHistoryList = [
   {

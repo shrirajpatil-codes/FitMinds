@@ -42,7 +42,7 @@ export const SessionSummaryPage = () => {
           </div>
           <h1 className="text-3xl font-extrabold text-slate-100 tracking-tight">Workout Complete!</h1>
           <p className="text-xs text-slate-400 mt-1 max-w-md mx-auto">
-            Awesome effort! FITMINDS logged your session, extended your streak, and recalibrated your adaptive strategy.
+            Awesome effort! FitMirror AI logged your session, extended your streak, and recalibrated your adaptive strategy.
           </p>
         </div>
 
@@ -119,7 +119,7 @@ export const SessionSummaryPage = () => {
         />
 
         <Alert variant="ai">
-          This outcome feedback will be used by FITMINDS to optimize next week's session load.
+          This outcome feedback will be used by FitMirror AI to optimize next week's session load.
         </Alert>
 
         <div className="flex items-center justify-end gap-3 pt-2">

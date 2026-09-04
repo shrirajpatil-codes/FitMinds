@@ -1,5 +1,5 @@
 /**
- * FITMINDS Mock User Profile & Context Data
+ * FitMirror AI Mock User Profile & Context Data
  */
 export const initialUserProfile = {
   id: 'usr_student_01',
@@ -23,5 +23,5 @@ export const initialDailyContext = {
   scheduleWindow: 'Evening',
   academicLoad: 'Moderate',
   lastCheckinTime: 'Today at 08:30 AM',
-  contextSummary: 'FITMINDS used your 20-min window & moderate academic load to shape today\'s session.',
+  contextSummary: 'FitMirror AI used your 20-min window & moderate academic load to shape today\'s session.',
 };

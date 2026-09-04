@@ -27,7 +27,7 @@ function ProtectedRoute({ children }) {
   if (isLoadingAuth) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center text-slate-400 text-xs">
-        Connecting to FITMINDS Backend...
+        Connecting to FitMirror AI Backend...
       </div>
     );
   }

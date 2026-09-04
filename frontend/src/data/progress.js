@@ -1,5 +1,5 @@
 /**
- * FITMINDS Mock Progress & Consistency Data
+ * FitMirror AI Mock Progress & Consistency Data
  */
 export const progressData = {
   currentStreakDays: 4,

@@ -1,5 +1,5 @@
 /**
- * FITMINDS Universal CV Exercise Engine
+ * FitMirror AI Universal CV Exercise Engine
  * Performs real-time joint angle calculations, exponential smoothing,
  * rep counting, movement stage tracking (UP/DOWN), range of motion (ROM),
  * depth assessment, and biomechanical posture feedback for ALL exercises.

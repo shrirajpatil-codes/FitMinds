@@ -17,7 +17,7 @@ export const SettingsPage = () => {
           Application Settings
         </h2>
         <p className="text-xs text-slate-400">
-          Manage your FITMINDS account, adaptation preferences, and notification controls.
+          Manage your FitMirror AI account, adaptation preferences, and notification controls.
         </p>
       </div>
 
@@ -27,7 +27,7 @@ export const SettingsPage = () => {
           <div className="flex items-center justify-between py-2">
             <div>
               <h4 className="text-xs font-semibold text-slate-200">Automated Plan Adaptation</h4>
-              <p className="text-[11px] text-slate-400">Allow FITMINDS to dynamically adjust workout duration during high exam load.</p>
+              <p className="text-[11px] text-slate-400">Allow FitMirror AI to dynamically adjust workout duration during high exam load.</p>
             </div>
             <button
               onClick={() => setAutoAdaptation(!autoAdaptation)}
@@ -59,7 +59,7 @@ export const SettingsPage = () => {
           <div className="flex items-center justify-between py-2">
             <div>
               <h4 className="text-xs font-semibold text-slate-200">Anonymized Habit Telemetry</h4>
-              <p className="text-[11px] text-slate-400">Help improve FITMINDS completion algorithms with anonymous statistics.</p>
+              <p className="text-[11px] text-slate-400">Help improve FitMirror AI completion algorithms with anonymous statistics.</p>
             </div>
             <button
               onClick={() => setPrivacySharing(!privacySharing)}

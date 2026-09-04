@@ -16,7 +16,7 @@ const AppContext = createContext(null);
 
 export const AppProvider = ({ children }) => {
   // Auth state
-  const [token, setToken] = useState(() => localStorage.getItem('FITMINDS_TOKEN') || null);
+  const [token, setToken] = useState(() => localStorage.getItem('FITMIRROR_TOKEN') || localStorage.getItem('FITMINDS_TOKEN') || null);
   const [currentUser, setCurrentUser] = useState(null);
   const [isLoadingAuth, setIsLoadingAuth] = useState(true);
   const [authError, setAuthError] = useState(null);
@@ -48,14 +48,14 @@ export const AppProvider = ({ children }) => {
     {
       id: 'msg_1',
       sender: 'ai',
-      text: 'Hello! I am your FITMINDS AI Coach. How can I help you understand or adapt your fitness strategy today?',
+      text: 'Hello! I am your FitMirror AI Coach. How can I help you understand or adapt your fitness strategy today?',
       time: 'Just now'
     }
   ]);
 
   // Method to fetch ML Recommendation
   const fetchMlRecommendation = useCallback(async () => {
-    if (!localStorage.getItem('FITMINDS_TOKEN')) return;
+    if (!localStorage.getItem('FITMIRROR_TOKEN') && !localStorage.getItem('FITMINDS_TOKEN')) return;
     setIsLoadingMlRec(true);
     try {
       const res = await api.recommendations.getWorkout();
@@ -71,7 +71,7 @@ export const AppProvider = ({ children }) => {
 
   // Load all user data from backend APIs
   const refreshUserData = useCallback(async () => {
-    if (!localStorage.getItem('FITMINDS_TOKEN')) return;
+    if (!localStorage.getItem('FITMIRROR_TOKEN') && !localStorage.getItem('FITMINDS_TOKEN')) return;
     try {
       // 1. Me & Profile
       const meRes = await api.auth.me();
@@ -136,7 +136,7 @@ export const AppProvider = ({ children }) => {
             availableTimeMinutes: c.availableTimeMinutes,
             academicLoad: c.academicLoad,
             lastCheckinTime: 'Today',
-            contextSummary: `FITMINDS adapted today's session for your ${c.availableTimeMinutes}-min window & ${c.academicLoad.toLowerCase()} academic load.`,
+            contextSummary: `FitMirror AI adapted today's session for your ${c.availableTimeMinutes}-min window & ${c.academicLoad.toLowerCase()} academic load.`,
           }));
         }
       } catch (e) {
@@ -175,7 +175,7 @@ export const AppProvider = ({ children }) => {
   // Initial Auth check
   useEffect(() => {
     const initAuth = async () => {
-      const storedToken = localStorage.getItem('FITMINDS_TOKEN');
+      const storedToken = localStorage.getItem('FITMIRROR_TOKEN') || localStorage.getItem('FITMINDS_TOKEN');
       if (!storedToken) {
         setIsLoadingAuth(false);
         return;
@@ -184,6 +184,7 @@ export const AppProvider = ({ children }) => {
         await refreshUserData();
       } catch (err) {
         console.error('Auth initialization error:', err);
+        localStorage.removeItem('FITMIRROR_TOKEN');
         localStorage.removeItem('FITMINDS_TOKEN');
         setToken(null);
         setCurrentUser(null);
@@ -202,7 +203,7 @@ export const AppProvider = ({ children }) => {
     try {
       const res = await api.auth.login(email, password);
       if (res.success && res.data?.token) {
-        localStorage.setItem('FITMINDS_TOKEN', res.data.token);
+        localStorage.setItem('FITMIRROR_TOKEN', res.data.token);
         setToken(res.data.token);
         setCurrentUser(res.data.user);
         await refreshUserData();
@@ -224,7 +225,7 @@ export const AppProvider = ({ children }) => {
     try {
       const res = await api.auth.register(name, email, password, extraProfileData);
       if (res.success && res.data?.token) {
-        localStorage.setItem('FITMINDS_TOKEN', res.data.token);
+        localStorage.setItem('FITMIRROR_TOKEN', res.data.token);
         setToken(res.data.token);
         setCurrentUser(res.data.user);
         await refreshUserData();
@@ -241,6 +242,7 @@ export const AppProvider = ({ children }) => {
   };
 
   const logoutUser = () => {
+    localStorage.removeItem('FITMIRROR_TOKEN');
     localStorage.removeItem('FITMINDS_TOKEN');
     setToken(null);
     setCurrentUser(null);
@@ -302,7 +304,7 @@ export const AppProvider = ({ children }) => {
       energyLevel: checkinData.energyLevel,
       readiness: checkinData.energyLevel >= 4 ? 'READY' : checkinData.energyLevel === 3 ? 'MODERATE' : 'RECOVERY',
       lastCheckinTime: 'Just now',
-      contextSummary: `FITMINDS adapted today's session for your ${checkinData.timeAvailable}-min window & ${dailyContext.academicLoad.toLowerCase()} academic load.`,
+      contextSummary: `FitMirror AI adapted today's session for your ${checkinData.timeAvailable}-min window & ${dailyContext.academicLoad.toLowerCase()} academic load.`,
     }));
 
     try {
@@ -477,7 +479,7 @@ export const AppProvider = ({ children }) => {
 
     try {
       const res = await api.coach.ask(userText);
-      const replyText = res.data?.reply || `FITMINDS AI Coach: Great question! Focus on your ${userProfile.availableTimeMinutes}-minute window with consistent effort.`;
+      const replyText = res.data?.reply || `FitMirror AI Coach: Great question! Focus on your ${userProfile.availableTimeMinutes}-minute window with consistent effort.`;
       
       const aiMsg = {
         id: `msg_${Date.now()}_ai`,
@@ -491,7 +493,7 @@ export const AppProvider = ({ children }) => {
       const fallbackMsg = {
         id: `msg_${Date.now()}_ai`,
         sender: 'ai',
-        text: `FITMINDS AI Coach: Based on your current goals (${userProfile?.goal || 'Fitness'}), focus on consistency and managing your workout length around your student schedule!`,
+        text: `FitMirror AI Coach: Based on your current goals (${userProfile?.goal || 'Fitness'}), focus on consistency and managing your workout length around your student schedule!`,
         time: 'Just now'
       };
       setCoachMessages(prev => [...prev, fallbackMsg]);

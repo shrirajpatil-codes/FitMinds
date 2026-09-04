@@ -51,7 +51,7 @@ export const TopBar = ({ title = 'Dashboard' }) => {
           <Avatar name={displayName} size="sm" />
           <div className="hidden lg:flex flex-col text-left">
             <span className="text-xs font-medium text-slate-200">{displayName}</span>
-            <span className="text-[10px] text-brand">{currentUser?.email || 'alex@fitminds.app'}</span>
+            <span className="text-[10px] text-brand">{currentUser?.email || 'alex@fitmirror.ai'}</span>
           </div>
 
           <button

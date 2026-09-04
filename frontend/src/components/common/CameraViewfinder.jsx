@@ -1043,7 +1043,7 @@ export const CameraViewfinder = ({
                 size="sm"
                 onClick={() => {
                   const link = document.createElement('a');
-                  link.download = `fitminds-posture-${Date.now()}.jpg`;
+                  link.download = `fitmirror-posture-${Date.now()}.jpg`;
                   link.href = capturedPhoto;
                   link.click();
                 }}

@@ -105,7 +105,7 @@ export const ProfilePage = () => {
     <div className="max-w-3xl mx-auto space-y-6">
       {saveSuccess && (
         <Alert variant="success" title="Profile & BMI Metrics Updated" icon={CheckCircle2}>
-          Your body measurements and profile updates have been saved to PostgreSQL. FITMINDS ML Workout Engine has updated your recommendations!
+          Your body measurements and profile updates have been saved to PostgreSQL. FitMirror AI ML Workout Engine has updated your recommendations!
         </Alert>
       )}
 
@@ -124,7 +124,7 @@ export const ProfilePage = () => {
               <h2 className="text-2xl font-bold text-slate-100">{formData.name}</h2>
               <Badge variant="ready">ACTIVE STUDENT</Badge>
             </div>
-            <p className="text-xs text-slate-400">FITMINDS Registered Student Profile</p>
+            <p className="text-xs text-slate-400">FitMirror AI Registered Student Profile</p>
             <p className="text-xs text-brand font-medium">{currentUser?.email || userProfile.email}</p>
           </div>
           <Button
@@ -356,7 +356,7 @@ export const ProfilePage = () => {
           </div>
 
           <div className="pt-4 border-t border-slate-800 flex items-center justify-between">
-            <span className="text-xs text-slate-400">Database Storage: <strong className="text-emerald-400">fitminds_db (PostgreSQL)</strong></span>
+            <span className="text-xs text-slate-400">Database Storage: <strong className="text-emerald-400">fitmirror_db (PostgreSQL)</strong></span>
             <Button variant="secondary" size="sm" onClick={() => setIsEditing(true)}>
               Edit Body Metrics & Goal
             </Button>

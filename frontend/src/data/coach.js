@@ -1,5 +1,5 @@
 /**
- * FITMINDS AI Coach Suggested Questions Data
+ * FitMirror AI Coach Suggested Questions Data
  */
 export const suggestedCoachQuestions = [
   "How do I gain weight and build muscle mass?",
@@ -11,5 +11,5 @@ export const suggestedCoachQuestions = [
 ];
 
 export const mockCoachResponses = {
-  "Why did my plan change today?": "FITMINDS observed your reported 20-minute window and moderate academic load today. To ensure you finish without feeling rushed or overwhelmed during exam prep, we optimized today's workout for core efficiency.",
+  "Why did my plan change today?": "FitMirror AI observed your reported 20-minute window and moderate academic load today. To ensure you finish without feeling rushed or overwhelmed during exam prep, we optimized today's workout for core efficiency.",
 };

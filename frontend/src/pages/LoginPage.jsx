@@ -43,7 +43,7 @@ export const LoginPage = () => {
             <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-brand-blue to-brand flex items-center justify-center text-slate-950 font-bold shadow-brand-glow">
               <Zap className="w-6 h-6 fill-slate-950 stroke-none" />
             </div>
-            <span className="font-extrabold text-2xl tracking-wider text-slate-100">FITMINDS</span>
+            <span className="font-extrabold text-2xl tracking-wider text-slate-100">FITMIRROR AI</span>
           </Link>
           <h2 className="text-xl font-bold text-slate-100">Welcome Back</h2>
           <p className="text-xs text-slate-400">Sign in to your adaptive student fitness portal</p>

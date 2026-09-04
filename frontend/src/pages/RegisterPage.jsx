@@ -175,7 +175,7 @@ export const RegisterPage = () => {
             <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-brand-blue to-brand flex items-center justify-center text-slate-950 font-bold shadow-brand-glow">
               <Zap className="w-6 h-6 fill-slate-950 stroke-none" />
             </div>
-            <span className="font-extrabold text-2xl tracking-wider text-slate-100">FITMINDS</span>
+            <span className="font-extrabold text-2xl tracking-wider text-slate-100">FITMIRROR AI</span>
           </Link>
           <h2 className="text-xl font-bold text-slate-100">Student Registration Wizard</h2>
           <p className="text-xs text-slate-400">Step {step} of {totalSteps} — Fill your details step by step</p>
@@ -219,7 +219,7 @@ export const RegisterPage = () => {
                 <Input
                   label="Student Email"
                   type="email"
-                  placeholder="user@fitminds.edu"
+                  placeholder="user@fitmirror.ai"
                   leftIcon={Mail}
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
@@ -364,7 +364,7 @@ export const RegisterPage = () => {
                     </div>
 
                     <p className="text-[11px] text-slate-400">
-                      FITMINDS ML Engine uses your BMI category to calibrate calorie targets and exercise intensities.
+                      FitMirror AI ML Engine uses your BMI category to calibrate calorie targets and exercise intensities.
                     </p>
                   </div>
                 )}
@@ -379,7 +379,7 @@ export const RegisterPage = () => {
                     <Target className="w-4 h-4 text-brand" />
                     Step 4: Primary Fitness Goal
                   </h3>
-                  <p className="text-xs text-slate-400">Select what you want to achieve with FITMINDS</p>
+                  <p className="text-xs text-slate-400">Select what you want to achieve with FitMirror AI</p>
                 </div>
 
                 <div className="space-y-2">
