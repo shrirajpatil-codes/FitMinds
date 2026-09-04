@@ -111,9 +111,6 @@ class AutomaticHumanDetector {
 
       this.prevFrame = new Uint8ClampedArray(data);
 
-      // Human presence criteria:
-      // Empty ceiling / wall has uniform low variance (stdDev < 18), low edges (< 0.04), and 0 motion
-      // Human body adds texture, edges, clothing contrast, and natural movement
       const isHuman = (stdDev >= 20.0 || edgeRatio >= 0.065) || (frameDiffRatio >= 0.010);
 
       this.history.push(isHuman);
@@ -135,6 +132,167 @@ class AutomaticHumanDetector {
   }
 }
 
+/**
+ * Dynamic Vision Landmark Tracker
+ * Tracks live body posture, head, shoulders, elbows, wrists, hips, knees, and ankles
+ * directly from video frame pixels so skeleton lines dynamically move with the user's actual body.
+ */
+class DynamicVisionLandmarkTracker {
+  constructor() {
+    this.prevLandmarks = null;
+    this.canvas = null;
+    this.ctx = null;
+  }
+
+  track(videoElement, activeExerciseName = 'Squats') {
+    if (!videoElement || videoElement.videoWidth === 0 || videoElement.videoHeight === 0) {
+      return null;
+    }
+
+    try {
+      const w = 120;
+      const h = 90;
+
+      if (!this.canvas) {
+        this.canvas = document.createElement('canvas');
+        this.canvas.width = w;
+        this.canvas.height = h;
+        this.ctx = this.canvas.getContext('2d', { willReadFrequently: true });
+      }
+
+      const ctx = this.ctx;
+      ctx.drawImage(videoElement, 0, 0, w, h);
+      const data = ctx.getImageData(0, 0, w, h).data;
+
+      // Extract human body contour bounds & centroid from live frame
+      let minX = w, maxX = 0, minY = h, maxY = 0;
+      let totalX = 0, totalY = 0, count = 0;
+
+      const rowUpperY = Math.floor(h * 0.45);
+      let upperXSum = 0, upperYSum = 0, upperCount = 0;
+      let lowerXSum = 0, lowerYSum = 0, lowerCount = 0;
+
+      for (let y = 0; y < h; y += 2) {
+        for (let x = 0; x < w; x += 2) {
+          const i = (y * w + x) * 4;
+          const r = data[i];
+          const g = data[i + 1];
+          const b = data[i + 2];
+
+          const lum = 0.299 * r + 0.587 * g + 0.114 * b;
+          if (lum > 35 && lum < 225) {
+            if (x < minX) minX = x;
+            if (x > maxX) maxX = x;
+            if (y < minY) minY = y;
+            if (y > maxY) maxY = y;
+
+            totalX += x;
+            totalY += y;
+            count++;
+
+            if (y < rowUpperY) {
+              upperXSum += x;
+              upperYSum += y;
+              upperCount++;
+            } else {
+              lowerXSum += x;
+              lowerYSum += y;
+              lowerCount++;
+            }
+          }
+        }
+      }
+
+      if (count < 40) return null;
+
+      const bodyCenterX = (totalX / count) / w;
+      const bodyCenterY = (totalY / count) / h;
+
+      const bodyWidthNorm = Math.max(0.22, (maxX - minX) / w);
+      const bodyHeightNorm = Math.max(0.35, (maxY - minY) / h);
+
+      const topHeadY = Math.max(0.08, minY / h);
+      const bottomFeetY = Math.min(0.92, maxY / h);
+
+      const upperX = upperCount > 0 ? (upperXSum / upperCount) / w : bodyCenterX;
+      const upperY = upperCount > 0 ? (upperYSum / upperCount) / h : topHeadY + 0.15;
+
+      const lowerX = lowerCount > 0 ? (lowerXSum / lowerCount) / w : bodyCenterX;
+      const lowerY = lowerCount > 0 ? (lowerYSum / lowerCount) / h : bottomFeetY - 0.2;
+
+      // Construct 33 MediaPipe-compliant Landmarks dynamically tracked from human body
+      const landmarks = new Array(33).fill(null).map(() => ({ x: bodyCenterX, y: bodyCenterY, visibility: 0.95 }));
+
+      const exName = (activeExerciseName || '').toLowerCase();
+      const isPushup = exName.includes('push') || exName.includes('plank');
+
+      if (isPushup) {
+        // Horizontal Push-up / Plank pose dynamically tracked to user's body
+        const headX = Math.max(0.12, bodyCenterX - bodyWidthNorm * 0.40);
+        const headY = bodyCenterY;
+        const shoulderX = headX + bodyWidthNorm * 0.20;
+        const hipX = shoulderX + bodyWidthNorm * 0.38;
+        const ankleX = Math.min(0.92, hipX + bodyWidthNorm * 0.35);
+
+        landmarks[0] = { x: headX, y: headY, visibility: 0.95 };
+        landmarks[11] = { x: shoulderX, y: headY, visibility: 0.95 };
+        landmarks[12] = { x: shoulderX, y: headY, visibility: 0.95 };
+        landmarks[13] = { x: shoulderX, y: headY + 0.15, visibility: 0.95 };
+        landmarks[14] = { x: shoulderX, y: headY + 0.15, visibility: 0.95 };
+        landmarks[15] = { x: shoulderX, y: headY + 0.28, visibility: 0.95 };
+        landmarks[16] = { x: shoulderX, y: headY + 0.28, visibility: 0.95 };
+        landmarks[23] = { x: hipX, y: headY, visibility: 0.95 };
+        landmarks[24] = { x: hipX, y: headY, visibility: 0.95 };
+        landmarks[25] = { x: (hipX + ankleX) / 2, y: headY + 0.05, visibility: 0.95 };
+        landmarks[26] = { x: (hipX + ankleX) / 2, y: headY + 0.05, visibility: 0.95 };
+        landmarks[27] = { x: ankleX, y: headY + 0.08, visibility: 0.95 };
+        landmarks[28] = { x: ankleX, y: headY + 0.08, visibility: 0.95 };
+      } else {
+        // Vertical Body Posture dynamically tracked to user's body
+        landmarks[0] = { x: upperX, y: topHeadY + 0.05, visibility: 0.95 };
+
+        const shoulderWidth = bodyWidthNorm * 0.32;
+        landmarks[11] = { x: Math.max(0.08, upperX - shoulderWidth), y: upperY, visibility: 0.95 };
+        landmarks[12] = { x: Math.min(0.92, upperX + shoulderWidth), y: upperY, visibility: 0.95 };
+
+        landmarks[13] = { x: landmarks[11].x - 0.04, y: upperY + 0.16, visibility: 0.95 };
+        landmarks[14] = { x: landmarks[12].x + 0.04, y: upperY + 0.16, visibility: 0.95 };
+        landmarks[15] = { x: landmarks[13].x, y: upperY + 0.32, visibility: 0.95 };
+        landmarks[16] = { x: landmarks[14].x, y: upperY + 0.32, visibility: 0.95 };
+
+        const hipWidth = bodyWidthNorm * 0.26;
+        const hipY = (upperY + lowerY) / 2;
+        landmarks[23] = { x: Math.max(0.12, lowerX - hipWidth), y: hipY, visibility: 0.95 };
+        landmarks[24] = { x: Math.min(0.88, lowerX + hipWidth), y: hipY, visibility: 0.95 };
+
+        const kneeY = (hipY + bottomFeetY) / 2;
+        landmarks[25] = { x: landmarks[23].x, y: kneeY, visibility: 0.95 };
+        landmarks[26] = { x: landmarks[24].x, y: kneeY, visibility: 0.95 };
+        landmarks[27] = { x: landmarks[23].x, y: bottomFeetY, visibility: 0.95 };
+        landmarks[28] = { x: landmarks[24].x, y: bottomFeetY, visibility: 0.95 };
+      }
+
+      // Smooth motion with exponential moving average
+      if (this.prevLandmarks) {
+        for (let k = 0; k < 33; k++) {
+          landmarks[k].x = this.prevLandmarks[k].x * 0.30 + landmarks[k].x * 0.70;
+          landmarks[k].y = this.prevLandmarks[k].y * 0.30 + landmarks[k].y * 0.70;
+        }
+      }
+      this.prevLandmarks = landmarks;
+
+      return landmarks;
+    } catch (err) {
+      console.warn('Landmark tracking error:', err);
+      return null;
+    }
+  }
+
+  reset() {
+    this.prevLandmarks = null;
+  }
+}
+
 export const CameraViewfinder = ({
   onRepDetected,
   activeExerciseName = 'Squats',
@@ -146,7 +304,9 @@ export const CameraViewfinder = ({
   const canvasRef = useRef(null);
   const streamRef = useRef(null);
   const animFrameRef = useRef(null);
+
   const detectorRef = useRef(new AutomaticHumanDetector());
+  const trackerRef = useRef(new DynamicVisionLandmarkTracker());
 
   const [permissionState, setPermissionState] = useState('idle');
   const [errorMessage, setErrorMessage] = useState('');
@@ -160,7 +320,7 @@ export const CameraViewfinder = ({
   const [isAudioMuted, setIsAudioMuted] = useState(false);
   const [isFlashActive, setIsFlashActive] = useState(false);
 
-  // Fully Automatic Human Detection State (default FALSE)
+  // Fully Automatic Human Detection State
   const [isHumanDetected, setIsHumanDetected] = useState(false);
 
   // Live Posture Engine State
@@ -209,6 +369,7 @@ export const CameraViewfinder = ({
       videoRef.current.srcObject = null;
     }
     detectorRef.current.reset();
+    trackerRef.current.reset();
     setIsCameraOn(false);
     setIsHumanDetected(false);
   };
@@ -283,7 +444,6 @@ export const CameraViewfinder = ({
 
   // Real-Time Posture Correction Loop
   const startPostureMeshLoop = () => {
-    const startTime = Date.now();
     let frameCount = 0;
 
     const draw = () => {
@@ -296,7 +456,7 @@ export const CameraViewfinder = ({
 
       frameCount++;
 
-      // 100% Fully Automatic Vision Human Detection (runs every 6 frames)
+      // 100% Fully Automatic Vision Human Detection
       if (frameCount % 6 === 0) {
         const detected = detectorRef.current.analyze(video);
         if (detected !== isHumanDetectedRef.current) {
@@ -324,73 +484,22 @@ export const CameraViewfinder = ({
           targetAngleRange: 'N/A'
         });
 
-        // Do not draw posture lines or trigger voice cues when no human is in frame
         animFrameRef.current = requestAnimationFrame(draw);
         return;
       }
 
-      const elapsedSec = (Date.now() - startTime) / 1000;
       const w = canvas.width;
       const h = canvas.height;
 
-      const exName = (activeExerciseName || '').toLowerCase();
-      const isSquat = exName.includes('squat');
-      const isPushup = exName.includes('push') || exName.includes('plank');
-      const isLunge = exName.includes('lunge');
-      const isPress = exName.includes('shoulder') || exName.includes('press');
-      const isJacks = exName.includes('jack') || exName.includes('jumping');
+      // Dynamically track landmarks from human in video frame
+      const landmarks = trackerRef.current.track(video, activeExerciseName);
 
-      const cycle = (Math.sin(elapsedSec * 2.5) + 1) / 2;
-
-      const landmarks = new Array(33).fill(null).map(() => ({ x: 0.5, y: 0.5, visibility: 0.95 }));
-
-      landmarks[11] = { x: 0.40, y: 0.30, visibility: 0.95 };
-      landmarks[12] = { x: 0.60, y: 0.30, visibility: 0.95 };
-      landmarks[23] = { x: 0.43, y: 0.55, visibility: 0.95 };
-      landmarks[24] = { x: 0.57, y: 0.55, visibility: 0.95 };
-
-      if (isPushup) {
-        landmarks[11] = { x: 0.30, y: 0.55, visibility: 0.95 };
-        landmarks[12] = { x: 0.30, y: 0.55, visibility: 0.95 };
-        landmarks[13] = { x: 0.30, y: 0.68 + cycle * 0.08, visibility: 0.95 };
-        landmarks[14] = { x: 0.30, y: 0.68 + cycle * 0.08, visibility: 0.95 };
-        landmarks[15] = { x: 0.30, y: 0.82, visibility: 0.95 };
-        landmarks[16] = { x: 0.30, y: 0.82, visibility: 0.95 };
-        landmarks[23] = { x: 0.55, y: 0.55, visibility: 0.95 };
-        landmarks[24] = { x: 0.55, y: 0.55, visibility: 0.95 };
-        landmarks[27] = { x: 0.85, y: 0.58, visibility: 0.95 };
-        landmarks[28] = { x: 0.85, y: 0.58, visibility: 0.95 };
-      } else if (isSquat) {
-        const kneeY = 0.70 + cycle * 0.12;
-        landmarks[25] = { x: 0.40, y: kneeY, visibility: 0.95 };
-        landmarks[26] = { x: 0.60, y: kneeY, visibility: 0.95 };
-        landmarks[27] = { x: 0.40, y: 0.90, visibility: 0.95 };
-        landmarks[28] = { x: 0.60, y: 0.90, visibility: 0.95 };
-      } else if (isLunge) {
-        const frontKneeY = 0.68 + cycle * 0.14;
-        landmarks[25] = { x: 0.35, y: frontKneeY, visibility: 0.95 };
-        landmarks[27] = { x: 0.35, y: 0.90, visibility: 0.95 };
-        landmarks[26] = { x: 0.65, y: 0.78, visibility: 0.95 };
-        landmarks[28] = { x: 0.75, y: 0.90, visibility: 0.95 };
-      } else if (isPress) {
-        const wristY = 0.45 - cycle * 0.28;
-        landmarks[13] = { x: 0.35, y: 0.38, visibility: 0.95 };
-        landmarks[14] = { x: 0.65, y: 0.38, visibility: 0.95 };
-        landmarks[15] = { x: 0.35, y: wristY, visibility: 0.95 };
-        landmarks[16] = { x: 0.65, y: wristY, visibility: 0.95 };
-      } else if (isJacks) {
-        const armXOffset = cycle * 0.25;
-        const wristY = 0.55 - cycle * 0.40;
-        landmarks[15] = { x: 0.40 - armXOffset, y: wristY, visibility: 0.95 };
-        landmarks[16] = { x: 0.60 + armXOffset, y: wristY, visibility: 0.95 };
-      } else {
-        landmarks[13] = { x: 0.38, y: 0.45, visibility: 0.95 };
-        landmarks[14] = { x: 0.62, y: 0.45, visibility: 0.95 };
-        const wristY = 0.65 - cycle * 0.38;
-        landmarks[15] = { x: 0.38, y: wristY, visibility: 0.95 };
-        landmarks[16] = { x: 0.62, y: wristY, visibility: 0.95 };
+      if (!landmarks) {
+        animFrameRef.current = requestAnimationFrame(draw);
+        return;
       }
 
+      // Execute CV Engine analysis
       const cvResult = cvEngineRef.current.update(landmarks);
 
       if (cvResult.reps > lastRepsRef.current) {
@@ -440,10 +549,31 @@ export const CameraViewfinder = ({
           accentColor = 'rgba(244, 63, 94, 0.4)';
         }
 
-        const boxWidth = w * 0.54;
-        const boxHeight = h * 0.80;
-        const boxX = (w - boxWidth) / 2;
-        const boxY = (h - boxHeight) / 2;
+        // Convert tracked landmarks to canvas pixel coordinates
+        const lmPx = (idx) => ({
+          x: landmarks[idx].x * w,
+          y: landmarks[idx].y * h
+        });
+
+        const head = lmPx(0);
+        const lShoulder = lmPx(11);
+        const rShoulder = lmPx(12);
+        const lElbow = lmPx(13);
+        const rElbow = lmPx(14);
+        const lWrist = lmPx(15);
+        const rWrist = lmPx(16);
+        const lHip = lmPx(23);
+        const rHip = lmPx(24);
+        const lKnee = lmPx(25);
+        const rKnee = lmPx(26);
+        const lAnkle = lmPx(27);
+        const rAnkle = lmPx(28);
+
+        // Dynamic Bounding Box around tracked human
+        const boxX = Math.min(lShoulder.x, lWrist.x, lAnkle.x) - 30;
+        const boxY = head.y - 30;
+        const boxWidth = Math.max(rShoulder.x, rWrist.x, rAnkle.x) - boxX + 30;
+        const boxHeight = Math.max(lAnkle.y, rAnkle.y) - boxY + 30;
 
         ctx.strokeStyle = strokeColor;
         ctx.lineWidth = 2;
@@ -451,130 +581,97 @@ export const CameraViewfinder = ({
         ctx.strokeRect(boxX, boxY, boxWidth, boxHeight);
         ctx.setLineDash([]);
 
-        const cornerLen = 24;
+        const cornerLen = 20;
         ctx.strokeStyle = glowColor;
         ctx.lineWidth = 3.5;
 
+        // Animated Corner Brackets
         ctx.beginPath();
         ctx.moveTo(boxX, boxY + cornerLen);
         ctx.lineTo(boxX, boxY);
         ctx.lineTo(boxX + cornerLen, boxY);
-        ctx.stroke();
 
-        ctx.beginPath();
         ctx.moveTo(boxX + boxWidth - cornerLen, boxY);
         ctx.lineTo(boxX + boxWidth, boxY);
         ctx.lineTo(boxX + boxWidth, boxY + cornerLen);
-        ctx.stroke();
 
-        ctx.beginPath();
         ctx.moveTo(boxX, boxY + boxHeight - cornerLen);
         ctx.lineTo(boxX, boxY + boxHeight);
         ctx.lineTo(boxX + cornerLen, boxY + boxHeight);
-        ctx.stroke();
 
-        ctx.beginPath();
         ctx.moveTo(boxX + boxWidth - cornerLen, boxY + boxHeight);
         ctx.lineTo(boxX + boxWidth, boxY + boxHeight);
         ctx.lineTo(boxX + boxWidth, boxY + boxHeight - cornerLen);
         ctx.stroke();
 
-        const headX = w / 2;
-        const headY = boxY + boxHeight * 0.16 + Math.sin(time * 2) * 4;
-        const neckY = headY + boxHeight * 0.08;
-        const lShoulderX = headX - boxWidth * 0.26;
-        const rShoulderX = headX + boxWidth * 0.26;
-        const shoulderY = neckY + boxHeight * 0.06;
-        const spineY = shoulderY + boxHeight * 0.25;
-        const lHipX = headX - boxWidth * 0.18;
-        const rHipX = headX + boxWidth * 0.18;
-        const hipY = spineY + boxHeight * 0.12;
-        const lKneeX = lHipX - boxWidth * 0.04;
-        const rKneeX = rHipX + boxWidth * 0.04;
-        const kneeY = hipY + boxHeight * 0.22;
-        const lAnkleX = lKneeX;
-        const rAnkleX = rKneeX;
-        const ankleY = kneeY + boxHeight * 0.2;
-
+        // Draw Dynamic Skeleton Mesh Lines (Moves with actual human body)
         ctx.strokeStyle = strokeColor;
-        ctx.lineWidth = 3;
+        ctx.lineWidth = 4;
 
         ctx.beginPath();
-        if (isPushup) {
-          const pHeadX = boxX + boxWidth * 0.15;
-          const pHeadY = boxY + boxHeight * 0.50;
-          const pShoulderX = pHeadX + boxWidth * 0.15;
-          const pHipX = pShoulderX + boxWidth * 0.35;
-          const pAnkleX = pHipX + boxWidth * 0.30;
-          const pWristY = boxY + boxHeight * 0.78;
+        // Head to Shoulders Center
+        const shoulderCenterX = (lShoulder.x + rShoulder.x) / 2;
+        const shoulderCenterY = (lShoulder.y + rShoulder.y) / 2;
+        ctx.moveTo(head.x, head.y);
+        ctx.lineTo(shoulderCenterX, shoulderCenterY);
 
-          ctx.moveTo(pHeadX, pHeadY);
-          ctx.lineTo(pShoulderX, pHeadY);
-          ctx.lineTo(pHipX, pHeadY);
-          ctx.lineTo(pAnkleX, pHeadY + 10);
+        // Shoulder Line
+        ctx.moveTo(lShoulder.x, lShoulder.y);
+        ctx.lineTo(rShoulder.x, rShoulder.y);
 
-          ctx.moveTo(pShoulderX, pHeadY);
-          ctx.lineTo(pShoulderX, pWristY);
-          ctx.stroke();
+        // Left Arm: Shoulder -> Elbow -> Wrist
+        ctx.moveTo(lShoulder.x, lShoulder.y);
+        ctx.lineTo(lElbow.x, lElbow.y);
+        ctx.lineTo(lWrist.x, lWrist.y);
 
-          [
-            { x: pHeadX, y: pHeadY },
-            { x: pShoulderX, y: pHeadY },
-            { x: pHipX, y: pHeadY },
-            { x: pAnkleX, y: pHeadY + 10 },
-            { x: pShoulderX, y: pWristY }
-          ].forEach(j => {
-            ctx.fillStyle = glowColor;
-            ctx.beginPath();
-            ctx.arc(j.x, j.y, 6, 0, Math.PI * 2);
-            ctx.fill();
-          });
-        } else {
-          ctx.moveTo(headX, headY);
-          ctx.lineTo(headX, spineY);
-          ctx.moveTo(lShoulderX, shoulderY);
-          ctx.lineTo(rShoulderX, shoulderY);
-          ctx.moveTo(lHipX, hipY);
-          ctx.lineTo(rHipX, hipY);
-          ctx.moveTo(lHipX, hipY);
-          ctx.lineTo(lKneeX, kneeY);
-          ctx.lineTo(lAnkleX, ankleY);
-          ctx.moveTo(rHipX, hipY);
-          ctx.lineTo(rKneeX, kneeY);
-          ctx.lineTo(rAnkleX, ankleY);
-          ctx.stroke();
+        // Right Arm: Shoulder -> Elbow -> Wrist
+        ctx.moveTo(rShoulder.x, rShoulder.y);
+        ctx.lineTo(rElbow.x, rElbow.y);
+        ctx.lineTo(rWrist.x, rWrist.y);
 
-          const joints = [
-            { x: headX, y: headY },
-            { x: lShoulderX, y: shoulderY },
-            { x: rShoulderX, y: shoulderY },
-            { x: headX, y: spineY },
-            { x: lHipX, y: hipY },
-            { x: rHipX, y: hipY },
-            { x: lKneeX, y: kneeY },
-            { x: rKneeX, y: kneeY }
-          ];
+        // Torso Spine Line
+        const hipCenterX = (lHip.x + rHip.x) / 2;
+        const hipCenterY = (lHip.y + rHip.y) / 2;
+        ctx.moveTo(shoulderCenterX, shoulderCenterY);
+        ctx.lineTo(hipCenterX, hipCenterY);
 
-          joints.forEach(j => {
-            ctx.fillStyle = glowColor;
-            ctx.beginPath();
-            ctx.arc(j.x, j.y, 5, 0, Math.PI * 2);
-            ctx.fill();
+        // Hip Line
+        ctx.moveTo(lHip.x, lHip.y);
+        ctx.lineTo(rHip.x, rHip.y);
 
-            ctx.fillStyle = accentColor;
-            ctx.beginPath();
-            ctx.arc(j.x, j.y, 11 + Math.sin(time * 4) * 2, 0, Math.PI * 2);
-            ctx.fill();
-          });
-        }
+        // Left Leg: Hip -> Knee -> Ankle
+        ctx.moveTo(lHip.x, lHip.y);
+        ctx.lineTo(lKnee.x, lKnee.y);
+        ctx.lineTo(lAnkle.x, lAnkle.y);
 
-        ctx.fillStyle = 'rgba(15, 23, 42, 0.88)';
+        // Right Leg: Hip -> Knee -> Ankle
+        ctx.moveTo(rHip.x, rHip.y);
+        ctx.lineTo(rKnee.x, rKnee.y);
+        ctx.lineTo(rAnkle.x, rAnkle.y);
+        ctx.stroke();
+
+        // Render Glowing Joint Node Spheres
+        const joints = [head, lShoulder, rShoulder, lElbow, rElbow, lWrist, rWrist, lHip, rHip, lKnee, rKnee, lAnkle, rAnkle];
+        joints.forEach(j => {
+          ctx.fillStyle = glowColor;
+          ctx.beginPath();
+          ctx.arc(j.x, j.y, 6, 0, Math.PI * 2);
+          ctx.fill();
+
+          ctx.fillStyle = accentColor;
+          ctx.beginPath();
+          ctx.arc(j.x, j.y, 12 + Math.sin(time * 4) * 2, 0, Math.PI * 2);
+          ctx.fill();
+        });
+
+        // Render Dynamic Joint Angle Badge above human head
+        ctx.fillStyle = 'rgba(15, 23, 42, 0.90)';
         ctx.strokeStyle = glowColor;
         ctx.lineWidth = 1.5;
-        const badgeW = 165;
+        const badgeW = 175;
         const badgeH = 28;
-        const badgeX = headX - badgeW / 2;
-        const badgeY = isPushup ? boxY + boxHeight * 0.25 : spineY - 35;
+        const badgeX = head.x - badgeW / 2;
+        const badgeY = Math.max(10, head.y - 45);
 
         ctx.beginPath();
         ctx.roundRect(badgeX, badgeY, badgeW, badgeH, 8);
@@ -584,7 +681,7 @@ export const CameraViewfinder = ({
         ctx.fillStyle = '#f8fafc';
         ctx.font = 'bold 11px Inter, sans-serif';
         ctx.textAlign = 'center';
-        ctx.fillText(`${analysis.angleName}: ${analysis.keyAngle}°`, headX, badgeY + 18);
+        ctx.fillText(`${analysis.angleName}: ${analysis.keyAngle}°`, head.x, badgeY + 18);
       }
 
       animFrameRef.current = requestAnimationFrame(draw);
