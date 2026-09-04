@@ -40,23 +40,12 @@ export const TodayPlanPage = () => {
               Adjust
             </Button>
             <Button
-              variant="brand"
-              size="md"
-              leftIcon={Camera}
-              onClick={() => {
-                if (startWorkoutSession) startWorkoutSession();
-                navigate('/live-counter');
-              }}
-            >
-              Live AI Camera Workout
-            </Button>
-            <Button
               variant="primary"
               size="md"
               leftIcon={Play}
               onClick={() => {
                 if (startWorkoutSession) startWorkoutSession();
-                navigate('/workout');
+                navigate('/live-counter');
               }}
             >
               Start Workout
@@ -126,7 +115,10 @@ export const TodayPlanPage = () => {
         <div className="text-xs text-slate-400">
           Ready to begin? You can switch to the <span className="text-brand font-medium">Live Rep Counter</span> during the workout.
         </div>
-        <Button variant="primary" leftIcon={Play} onClick={() => navigate('/workout')}>
+        <Button variant="primary" leftIcon={Play} onClick={() => {
+          if (startWorkoutSession) startWorkoutSession();
+          navigate('/live-counter');
+        }}>
           Start Now
         </Button>
       </div>
